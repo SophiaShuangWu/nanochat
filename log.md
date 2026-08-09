@@ -1,3 +1,14 @@
+# 2026-8-9 Update:
+To continue where I left off 10 days ago - I'm still working through runs/speedrun.sh. Here's the command I'm focusing on:
+```bash
+torchrun --standalone --nproc_per_node=8 -m scripts.base_train -- --depth=24 --target-param-data-ratio=8 --device-batch-size=16 --fp8 --run=$WANDB_RUN
+```
+I've been told by DeepSeek that the parameters followed by the -- delimiter are the ones passed into scripts.base_train.
+
+I'll spend some time reading scripts/base_train.py to figure out what Karpathy originally intended, and maybe compare it with
+ 'Attention Is All You Need,' which I read from last May to early June.
+
+
 # 2026-7-30 Update:
 I summarized the tokenizer training process and created tok_training_local_cpu.sh inside the /runs directory. For pretraining, I also created pretraining_local_t600.sh in the same folder.
 
@@ -7,8 +18,7 @@ bash runs/tok_training_local_cpu.sh
 bash runs/pretraining_local_t600.sh
 ```
 
-I'll sync the outputs tomorrow.
-
+I'll sync the outputs tomorrow. (2026-7-31: Both worked locally on my PC.)
 
 
 # 2026-7-29 Update:
