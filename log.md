@@ -8,6 +8,30 @@ I've been told by DeepSeek that the parameters followed by the -- delimiter are 
 I'll spend some time reading scripts/base_train.py to figure out what Karpathy originally intended, and maybe compare it with
  'Attention Is All You Need,' which I read from last May to early June.
 
+Here's my test on 1xT600 4G GPU:
+```bash
+(nanochat) shuang@Shuang-PC:~/projects/llm-training-lab/nanochat$ python -m scripts.base_train --depth=4 --max-seq-len=512 --device-batch-size=1 --eval-tokens=512 --core-metric-every=-1 --total-batch-size=512 --num-iterations=10000
+```
+Output on the screen:
+```bash
+step 09999/10000 (99.99%) | loss: 5.757840 | lrm: 0.05 | dt: 83.47ms | tok/sec: 6,134 | bf16_mfu: 0.00 | epoch: 1 pq: 0 rg: 14 | total time: 13.84m | eta: 0.0m
+Step 10000 | Validation bpb: 1.946162
+<|bos|>The capital of France is a great way to make a good idea to be a good idea to be a
+<|bos|>The chemical symbol of gold is a type of material that is used in the process of the material. The process
+<|bos|>If yesterday was Friday, then tomorrow will be a good idea to be a good idea to be a good idea to be a
+<|bos|>The opposite of hot is the most common part of the world. The most common part of the world is
+<|bos|>The planets of the solar system are: the system of the system, which is the system of the system, and the
+<|bos|>My favorite color is a great way to make a good idea of a lot of people who are not
+<|bos|>If 5*x + 3 = 13, then x is 1.5.5.5.5.5.5.5
+2026-08-09 22:54:11,737 - nanochat.checkpoint_manager - INFO - Saved model parameters to: /home/shuang/.cache/nanochat/base_checkpoints/d4/model_010000.pt
+2026-08-09 22:54:11,737 - nanochat.checkpoint_manager - INFO - Saved metadata to: /home/shuang/.cache/nanochat/base_checkpoints/d4/meta_010000.json
+2026-08-09 22:54:12,023 - nanochat.checkpoint_manager - INFO - Saved optimizer state to: /home/shuang/.cache/nanochat/base_checkpoints/d4/optim_010000_rank0.pt
+Peak memory usage: 611.95MiB
+Total training time: 13.84m
+Minimum validation bpb: 1.944503
+```
+The test results are a bit hard to interpret, but they're acceptable. I feel good when I ask my T600 to train the model. I feel relaxed, like breathing fresh air while my mind is wrapped in silk. I really enjoy the implementation.
+
 
 # 2026-7-30 Update:
 I summarized the tokenizer training process and created tok_training_local_cpu.sh inside the /runs directory. For pretraining, I also created pretraining_local_t600.sh in the same folder.
