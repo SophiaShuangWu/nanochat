@@ -1,3 +1,31 @@
+# 2026-8-10 Update:
+Reading base_train.py...
+
+I guess 
+```python
+os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
+```
+adds a key-value pair "PYTORCH_ALLOC_CONF": "expandable_segments:True" to os.environ (which is dict-like, though not a real dict).
+
+I guess os, gc, json, time, math, argparse, dataclasses and contextlib are from the standard library, whereas wandb and torch are third-party. nanochat and scripts are our own project packages. So that's why Karpathy leaves a blank line between them — to separate imports by type.
+
+The output of 
+```python
+print_banner()
+```
+is:
+
+                                                       █████                █████
+                                                      ░░███                ░░███
+     ████████    ██████   ████████    ██████   ██████  ░███████    ██████  ███████
+    ░░███░░███  ░░░░░███ ░░███░░███  ███░░███ ███░░███ ░███░░███  ░░░░░███░░░███░
+     ░███ ░███   ███████  ░███ ░███ ░███ ░███░███ ░░░  ░███ ░███   ███████  ░███
+     ░███ ░███  ███░░███  ░███ ░███ ░███ ░███░███  ███ ░███ ░███  ███░░███  ░███ ███
+     ████ █████░░████████ ████ █████░░██████ ░░██████  ████ █████░░███████  ░░█████
+    ░░░░ ░░░░░  ░░░░░░░░ ░░░░ ░░░░░  ░░░░░░   ░░░░░░  ░░░░ ░░░░░  ░░░░░░░░   ░░░░░
+which is conspicuous.
+
+
 # 2026-8-9 Update:
 To continue where I left off 10 days ago - I'm still working through runs/speedrun.sh. Here's the command I'm focusing on:
 ```bash
