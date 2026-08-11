@@ -1,3 +1,31 @@
+# 2026-8-11 Update:
+Reading base_train.py...
+
+I think Karpathy just showed us the standard way to pass hyperparameters into a Python script:
+```python
+import argparse
+parser = argparse.ArgumentParser(description="Pretrain base model")
+parser.add_argument("--run", type=str, default="dummy", help="wandb run name ('dummy' disables wandb logging)")
+args = parser.parse_args()
+```
+To put it simply: parser.add_argument() defines the rules - it sets up what arguments are expected. Then parser.parse_args() actually enforces those rules by parsing the real command-line input. One subtle but important thing: the order matters. You can't call parse_args() before you've added all the arguments, because Python executes the script sequentially — it won't know about the rules you haven't defined yet.
+
+I'm doing some REPL-style exploration with a tiny test.py script, running experiments on my single T600 (4GB). Here's the GPU info:
+| item | value |
+|-----|-----|
+| CUDA available | Yes |
+| CUDA version | 12.8 |
+| GPU count | 1 |
+| GPU 0 name | NVIDIA T600 Laptop GPU |
+| GPU 0 memory | 4.29 GB |
+| GPU 0 compute capability | 7.5 |
+| torch version | 2.9.1+cu128 |
+| torch.cuda | available |
+| cuda toolkit | 12.8 |
+It looks like fp16 and bfloat16 perform worse than fp32 here.
+
+
+
 # 2026-8-10 Update:
 Reading base_train.py...
 
