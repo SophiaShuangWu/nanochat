@@ -22,6 +22,7 @@ I'm doing some REPL-style exploration with a tiny test.py script, running experi
 | torch version | 2.9.1+cu128 |
 | torch.cuda | available |
 | cuda toolkit | 12.8 |
+
 It looks like fp16 and bfloat16 perform worse than fp32 here.
 
 
