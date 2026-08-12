@@ -1,7 +1,17 @@
+# 2026-8-12 Update:
+Reading base_train.py...
+
+Today I checked lines 85 to 96. From what I can tell, Karpathy wants to see what GPU the script is running on and its compute capability. Also checking if the training is set up in a distributed way—if so, at least two GPUs—and whether the current GPU is the main process. He also prepped a few functions that might come in handy later. These parts use functions from nanochat.common or the torch module.
+
+As for me, I'm on a single T600 with 4GB. It's a pre-Ampere architecture, only supports FP32, no BF16. Peak FP32 flops is 1.079 TFlops. BF16 peak shows up as inf.
+
+The code itself isn't hard to figure out—it's clear. It's just the feeling I get before I even touch a single line of code. This mix of depression and anxiety just keeps me stuck.
+
+
 # 2026-8-11 Update:
 Reading base_train.py...
 
-I think Karpathy just showed us the standard way to pass hyperparameters into a Python script:
+I think Karpathy just showed us the standard way to parse hyperparameters passed into a Python script:
 ```python
 import argparse
 parser = argparse.ArgumentParser(description="Pretrain base model")
