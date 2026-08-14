@@ -1,3 +1,8 @@
+# 2026-8-14 Update:
+Reading base_train.py...
+
+I’m checking line 146 now. I've already reviewed lines 129–141, and I'm currently diving into line 142. Still, I haven't formed an integrated intuition yet.
+
 # 2026-8-13 Update:
 Reading base_train.py...
 
