@@ -1,3 +1,9 @@
+# 2026-8-16 Update:
+test.py is what I came up with as I was reading.
+
+Reading base_train.py line 142 -> nanochat.gpt line 163 -> torch.nn.modules.module line 479-521.
+
+
 # 2026-8-14 Update:
 Reading base_train.py...
 
