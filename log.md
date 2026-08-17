@@ -1,3 +1,12 @@
+# 2026-8-17 Update:
+test.py has been updated.
+
+I've checked lines 142 and 146 in base_train.py. Based on my testing and understanding, the model variable is a GPT object that contains many attributes with torch.Tensor objects, typically initialized via torch.nn.Embedding and torch.nn.Linear. However, because of line 141, the model variable won't actually store the values of any torch.Tensor objects. Since it's invoked by the build_model_meta function, this seems to make sense—no actual computation has happened up to this point.
+
+What really stood out to me during the code reading was the torch.nn.Module class—especially its __init__ and __getattr__ methods—and the torch.nn.ModuleDict class, particularly its __setitem__ method.
+
+Of course, reading through the code does remind me of what I read in Attention Is All You Need, but I want to first build a Pythonic mental model of the entire system as a whole. No rush to map the code to the paper just yet.
+
 # 2026-8-16 Update:
 test.py is what I came up with as I was reading.
 

@@ -1,14 +1,148 @@
-from torch.nn import Module
-a = Module()
-print(a.call_super_init)
+# import torch
+# a = torch.arange(3)
+# b = torch.arange(2)
+# freqs = torch.outer(a,b)
+# # print(freqs)
+# cos, sin = freqs.cos(), freqs.sin()
+# # print(cos, sin, sep='\n')
+# print(hasattr(cos, "__torch_function__"))
+
+# import torch
+# channel_range = torch.arange(0, 128, 2, dtype=torch.float32, device="cpu")
+# inv_freq = 1.0 / (100000 ** (channel_range / 128))
+# print(inv_freq)
+
+# import torch
+# with torch.device("meta"):
+#     channel_range = torch.arange(0, 128, 2, dtype=torch.float32, device="meta")
+#     print(channel_range)
+
+# import torch
+# a = torch.empty(1)
+# print(a.dtype)
+
+# import torch
+# from torch.nn.parameter import Parameter
+# a = torch.empty(3,3)
+# b = Parameter(a)
+# print(b.device)
+# print(b)
+# with torch.device("meta"):
+#     a = torch.empty(3,3)
+#     b = Parameter(a)
+#     print(b.device)
+#     print(b)
+
+# from torch.nn.modules.sparse import Embedding
+# from torch.nn.modules.container import ModuleDict
+# a = ModuleDict({"sophia": Embedding(3, 3)})
+# print(a._modules)
+
+# from torch.nn.modules.container import ModuleDict
+# a = ModuleDict({"a":1, "b":2})
+# print(a.a)
+
+# import torch
+# print(torch.ones(4), torch.zeros(1), sep='\n')
+
+# a = {"wte": 1, "h": 2}
+# print(a.items())
+
+# from collections import abc as container_abcs, OrderedDict
+# from torch.nn.modules.container import ModuleDict
+# a = {}
+# print(isinstance(a, (OrderedDict, ModuleDict, container_abcs.Mapping)))
+
+# class sophia:
+#     pass
+# a = sophia()
+# print(a._parameter)
+
+# import math
+# import torch
+# from torch.nn.parameter import Parameter
+# from torch.nn import init
+# a = torch.empty(3,3)
+# b = Parameter(a)
+# print(b)
+# init.kaiming_normal_(b, a=math.sqrt(5))
+# print(b)
+
+# import torch
+# from torch.nn.parameter import Parameter
+# a = torch.empty(3,3)
+# print(a.requires_grad)
+# print(a.uniform_(0,1))
+# b = Parameter(a)
+# print(b.requires_grad)
+# print(b)
+
+# import torch
+# print(torch._jit_internal.is_scripting())
+
+# import math
+# param = math.sqrt(5)
+# print(not isinstance(param, bool)
+# and isinstance(param, int)
+# or isinstance(param, float)
+# )
+
+# import torch
+# m = torch.empty(2,3)
+# print(m.size(1))
+# print(m.dim())
+# print(m)
+# print(2 in m.shape)
+
+# a = [1,2,3]
+# print(a[-1])
+
+# for i in range(10):
+#     print(i % 1)
+# print(5//2, -5//2)
+
+# from dataclasses import dataclass
+# @dataclass
+# class sophia:
+#     # name = "shuang"
+#     name: str = "shuang"
+# a = sophia()
+# print(a.__dict__)
+
+# from nanochat.gpt import GPTConfig
+# config = GPTConfig()
+# print(config.__class__, config.__dict__, sep='\n')
 
 # class sophia:
 #     name = "shuang"
 #     def __init__(self):
-#         self.name = "wu"
+#         self.__setattr__("project", "nanochat")
+# a = sophia()
+# print(a.__class__)
+# print(a.__dict__)
+
+# class sophia:
+#     name = "shuang"
+#     def __init__(self):
+#         pass
+# a = sophia()
+# print(a.__dict__)
+# print(id(a.name), id(sophia.name))
+# print(a.__dict__)
+# a.name = "wu"
+# print(sophia.name, a.name, a.__dict__, sep='\n')
+
+# from torch.nn import Module
+# a = Module()
+# print(a.call_super_init)
+
+# class sophia:
+#     name = "shuang"
+#     def __init__(self):
+#         pass
+#         # self.name = "wu"
 #         # super().__setattr__("name", "wu")
 # a = sophia()
-# print(sophia.name, a.name, sep='\n')
 # print(a.__dict__)
 
 # print(bool(None))
@@ -22,9 +156,7 @@ print(a.call_super_init)
 # class sophia:
 #     name = "shuang"
 # a = sophia()
-# print(sophia.name, a.name)
-# sophia.name = "colorful clouds"
-# print(sophia.name, a.name)
+# print(a.name)
 # a.name = "wu"
 # print(sophia.name, a.name)
 # sophia.name = "caiyun"
@@ -66,6 +198,7 @@ print(a.call_super_init)
 # from nanochat.common import print0
 # tokenizer = RustBPETokenizer.from_directory("/home/shuang/.cache/nanochat/tokenizer")
 # vocab_size = tokenizer.enc.n_vocab
+# print(tokenizer.encode("I'm Sophia."))
 # print0(f"Vocab size: {vocab_size:,}")
 
 # import pickle
