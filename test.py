@@ -1,3 +1,26 @@
+from nanochat.gpt import GPTConfig
+config = GPTConfig()
+print(config.__dict__)
+
+# a = [("1",1), ("2",2)]
+# print(dict(a))
+
+
+# from dataclasses import dataclass
+# @dataclass
+# class sophia:
+#     pass
+# print(hasattr(sophia, '__dataclass_fields__'))
+
+
+# from nanochat.gpt import GPTConfig
+# config = GPTConfig()
+# _FIELDS = '__dataclass_fields__'
+# fields = getattr(config, _FIELDS)
+# print(fields)
+# print(tuple(f.name for f in fields.values()))
+# print(getattr(config, 'sequence_len'))
+
 # import torch
 # a = torch.arange(3)
 # b = torch.arange(2)

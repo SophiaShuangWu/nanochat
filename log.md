@@ -1,3 +1,6 @@
+# 2026-8-18 Update:
+base_train.py line 146-149 checked.
+
 # 2026-8-17 Update:
 test.py has been updated.
 
