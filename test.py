@@ -1,6 +1,92 @@
-from nanochat.gpt import GPTConfig
-config = GPTConfig()
-print(config.__dict__)
+# import argparse
+# parser = argparse.ArgumentParser()
+# parser.add_argument("--fp8", action="store_true", help="enable FP8 training")
+# args = parser.parse_args()
+# print(args.fp8)
+
+from nanochat.gpt import GPTConfig, GPT
+import torch
+config = GPTConfig(
+    sequence_len=512, vocab_size=32768,
+    n_layer=4, n_head=2, n_kv_head=2, n_embd=256,
+    window_pattern="L",
+)
+with torch.device("meta"):
+    model = GPT(config)
+# def print_module(module):
+#     if not module._modules:
+#         print(module)
+#     for _ in module._modules:
+#         print_module(module._modules[_])
+# print_module(model)
+# def print_parameters(module):
+#     if not module._modules:
+#         print(module._parameters)
+#         return
+#     for _ in module._modules:
+#         print_parameters(module._modules[_])
+#     print(module._parameters)
+# print_parameters(model)
+# def print_buffers(module):
+#     if not module._modules:
+#         print(module._buffers)
+#         return
+#     for _ in module._modules:
+#         print_buffers(module._modules[_])
+#     print(module._buffers)
+# print_buffers(model)
+
+    
+# print(model.resid_lambdas.device)
+# for _ in model.transformer.h[0].attn.c_q._modules:
+#     print("m", _)
+# for _ in model.transformer.h[0].attn.c_q._parameters:
+#     print("p", _)
+# for _ in model.transformer.h[0].attn.c_q._buffers:
+#     print("b", _)
+# model.to_empty(device=torch.device("cuda"))
+# device = torch.cuda.current_device()
+# allocated = torch.cuda.memory_allocated(device)
+# print(f"{allocated / 1024**2:.2f} MB")
+# print(model)
+# print(model.resid_lambdas.device)
+# model.init_weights()
+# for block in model.transformer.h:
+#     print(block.attn.ve_gate)
+# print(model.value_embeds)
+# torch.nn.init.constant_(model.backout_lambda, 0.2)
+# print(model.backout_lambda)
+# weight = model.transformer.wte.weight
+# print(weight.device, torch.overrides.has_torch_function_variadic(weight), sep='\n')
+# torch.nn.init.normal_(weight, mean=0.0, std=0.8)
+# print(model.transformer.h[0].attn.c_q.weight.size())
+# n_embd = config.n_embd
+# s = 3**0.5 * n_embd**-0.5
+# torch.nn.init.uniform_(model.transformer.h[0].attn.c_q.weight, -s, s)
+# print(model.transformer.h[0].attn.c_q.weight)
+# torch.nn.init.zeros_(model.smear_lambda)
+# print(model.smear_lambda)
+
+# param = model.transformer.h[0].attn.c_q._parameters["weight"]
+# print(param.requires_grad)
+# with torch.no_grad():
+#     param_applied = torch.empty_like(param, device=torch.device("cuda"))
+# print(param_applied, id(param_applied), param_applied.data_ptr(), sep='\n')
+# print(torch._has_compatible_shallow_copy_type(param, param_applied))
+# print(torch.__future__.get_swap_module_params_on_conversion())
+# print(hasattr(param_applied, "__tensor_flatten__"))
+# from torch._subclasses.fake_tensor import FakeTensor
+# print(isinstance(param, FakeTensor))
+# buff = model.transformer.h[0].attn.c_q._buffers
+# print(buff)
+
+# f = lambda t: t+1
+# print(f(1))
+
+
+# from nanochat.gpt import GPTConfig
+# config = GPTConfig()
+# print(config.__dict__)
 
 # a = [("1",1), ("2",2)]
 # print(dict(a))
