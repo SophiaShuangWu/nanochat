@@ -36,7 +36,7 @@ def print_buffers(module):
 print_buffers(model)
 ```
 
-Line 150 uses torch.empty_like(..., device=torch.device("cuda")) to allocate CUDA storage for all torch.Tensor objects in the _parameters and _buffers attributes of every Module object in the model. This is done by recursively traversing the _modules attribute tree using torch.nn.Module._apply function, until no nested modules remain. It appears that Embedding objects have a weight parameter, Linear objects have both weight and bias parameters, and only the model itself has cos and sin buffers.
+Line 150 uses torch.empty_like(..., device=torch.device("cuda")) to allocate CUDA storage for all torch.Tensor objects in the _parameters and _buffers attributes of every Module object in the model. This is done by recursively traversing the _modules attribute tree using torch.nn.Module._apply function, until no nested modules remain. When inspecting parameter attributes across Module objects, only Embedding instances have a weight parameter, and only Linear instances have both weight and bias. Other Module instances within the model—excluding the root model itself—have no parameter attributes. The root model, however, has four parameters (resid_lambdas, x0_lambdas, smear_lambda, and backout_lambda). As for buffers, only the root model owns cos and sin buffers; no other Module instance in the model does.
 
 ```python
 from nanochat.gpt import GPTConfig, GPT
