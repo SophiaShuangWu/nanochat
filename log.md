@@ -1,3 +1,71 @@
+# 2026-8-19 Update:
+Reding scripts/base_train.py...
+
+It seems it's important to check the _modules, _parameters and _buffers attribute of a Module object.
+```python
+from nanochat.gpt import GPTConfig, GPT
+import torch
+config = GPTConfig(
+    sequence_len=512, vocab_size=32768,
+    n_layer=4, n_head=2, n_kv_head=2, n_embd=256,
+    window_pattern="L",
+)
+with torch.device("meta"):
+    model = GPT(config)
+def print_module(module):
+    if not module._modules:
+        print(module)
+    for _ in module._modules:
+        print_module(module._modules[_])
+print_module(model)
+def print_parameters(module):
+    if not module._modules:
+        print(module._parameters)
+        return
+    for _ in module._modules:
+        print_parameters(module._modules[_])
+    print(module._parameters)
+print_parameters(model)
+def print_buffers(module):
+    if not module._modules:
+        print(module._buffers)
+        return
+    for _ in module._modules:
+        print_buffers(module._modules[_])
+    print(module._buffers)
+print_buffers(model)
+```
+
+Line 150 uses torch.empty_like(..., device=torch.device("cuda")) to allocate CUDA storage for all torch.Tensor objects in the _parameters and _buffers attributes of every Module object in the model. This is done by recursively traversing the _modules attribute tree using torch.nn.Module._apply function, until no nested modules remain. It appears that Embedding objects have a weight parameter, Linear objects have both weight and bias parameters, and only the model itself has cos and sin buffers.
+
+```python
+from nanochat.gpt import GPTConfig, GPT
+import torch
+config = GPTConfig(
+    sequence_len=512, vocab_size=32768,
+    n_layer=4, n_head=2, n_kv_head=2, n_embd=256,
+    window_pattern="L",
+)
+with torch.device("meta"):
+    model = GPT(config)
+model.to_empty(device=torch.device("cuda"))
+device = torch.cuda.current_device()
+allocated = torch.cuda.memory_allocated(device)
+print(f"{allocated / 1024**2:.2f} MB")
+```
+Output:
+142.50 MB
+
+Line 151 then proceeds to initialize these torch.Tensor objects on CUDA.
+
+Line 154-157 checked.
+
+Line 158-162 ignored, not involved in this training run.
+
+Line 168-192 ignored, not involved in this training run.
+
+Line 245 checked.
+
 # 2026-8-18 Update:
 base_train.py line 146-149 checked.
 
