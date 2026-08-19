@@ -40,8 +40,8 @@ with torch.device("meta"):
 # print(model.resid_lambdas.device)
 # for _ in model.transformer.h[0].attn.c_q._modules:
 #     print("m", _)
-# for _ in model.transformer.h[0].attn.c_q._parameters:
-#     print("p", _)
+# for _ in model._parameters:
+#     print(_)
 # for _ in model.transformer.h[0].attn.c_q._buffers:
 #     print("b", _)
 # model.to_empty(device=torch.device("cuda"))
