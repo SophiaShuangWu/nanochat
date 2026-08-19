@@ -1,5 +1,5 @@
 # 2026-8-19 Update:
-Reding scripts/base_train.py...
+Reading scripts/base_train.py...
 
 It seems it's important to check the _modules, _parameters and _buffers attribute of a Module object.
 ```python
