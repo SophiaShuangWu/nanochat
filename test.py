@@ -13,6 +13,18 @@ config = GPTConfig(
 )
 with torch.device("meta"):
     model = GPT(config)
+model.to_empty(device=torch.device("cuda"))
+model.init_weights() 
+# print(dir(model))
+# print(model.num_scaling_params())
+orig_model = model
+model = torch.compile(model, dynamic=False)
+print(model.transformer.wte)
+# print(model.get_compiler_config())
+# print(model.dynamo_ctx)
+# print(dir(model))
+# print(model._orig_mod == orig_model)
+
 # def print_module(module):
 #     if not module._modules:
 #         print(module)
