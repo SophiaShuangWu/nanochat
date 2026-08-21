@@ -1,25 +1,81 @@
+
+
 # import argparse
 # parser = argparse.ArgumentParser()
 # parser.add_argument("--fp8", action="store_true", help="enable FP8 training")
 # args = parser.parse_args()
 # print(args.fp8)
 
+# from nanochat.gpt import GPTConfig, GPT
+# import torch
+# config = GPTConfig(
+#     sequence_len=512, vocab_size=32768,
+#     n_layer=4, n_head=2, n_kv_head=2, n_embd=256,
+#     window_pattern="L",
+# )
+# with torch.device("meta"):
+#     model = GPT(config)
+
 from nanochat.gpt import GPTConfig, GPT
 import torch
-config = GPTConfig(
-    sequence_len=512, vocab_size=32768,
-    n_layer=4, n_head=2, n_kv_head=2, n_embd=256,
-    window_pattern="L",
-)
-with torch.device("meta"):
-    model = GPT(config)
-model.to_empty(device=torch.device("cuda"))
-model.init_weights() 
+def build_model_meta(depth):
+    base_dim = depth * 64
+    model_dim = ((base_dim + 128 - 1) // 128) * 128
+    num_heads = model_dim // 128
+    config = GPTConfig(
+        sequence_len=512, vocab_size=32768,
+        n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
+        window_pattern="L",
+    )
+    with torch.device("meta"):
+        model_meta = GPT(config)
+    return model_meta
+model = build_model_meta(4)
+d12 = build_model_meta(12)
+
+def get_scaling_params(m):
+    params_counts = m.num_scaling_params()
+    scaling_params = params_counts['transformer_matrices'] + params_counts['lm_head']
+    return scaling_params
+target_tokens = int(12 * get_scaling_params(model))
+D_REF = int(12 * get_scaling_params(d12))
+
+print(D_REF)
+
+import math
+weight_decay_scaled = 0.28 * math.sqrt(512 / 2**19 ) * (D_REF / target_tokens)    
+print(weight_decay_scaled)
+
+
+# print(model._modules, model._parameters, sep='\n')
+# model.to_empty(device=torch.device("cuda"))
+# model.init_weights() 
+# orig_model = model
+# model = torch.compile(model, dynamic=False)
+
+# batch_ratio = 512 / 524288
+# batch_lr_scale = batch_ratio ** 0.5
+# print(f"Scaling LRs by {batch_lr_scale:.4f}")
+# param_counts = model.num_scaling_params()
+# scaling_params = param_counts['transformer_matrices'] + param_counts['lm_head']
+# print(scaling_params)
+# target_tokens = int(12 * scaling_params)
+# print(f"{target_tokens:,}", sep='\n')
+# print(orig_model is model._orig_mod)
+# print(orig_model.config is model.config)
+# print(model.window_sizes)
+
+
+
+# print(model.num_scaling_params())
+# for p in model.transformer.h.parameters():
+#     print(p.numel())
+
+# print(model.num_scaling_params().items())
+
 # print(dir(model))
 # print(model.num_scaling_params())
-orig_model = model
-model = torch.compile(model, dynamic=False)
-print(model.transformer.wte)
+# print(model.transformer.wte)
 # print(model.get_compiler_config())
 # print(model.dynamo_ctx)
 # print(dir(model))
