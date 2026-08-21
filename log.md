@@ -1,3 +1,22 @@
+# 2026-8-21 Update:
+Reading scripts/base_train.py...
+
+Lines 252–256 confirm that the so-called “parameters”—which are really just the undetermined coefficients the training aims to solve for—are in fact the elements of all the Parameter objects in the model. For this training configuration, that totals 36,700,242 FP32 numbers.
+
+Line 257 is not hard to follow, but the theory behind it references a paper. I won’t pretend to have dived deep into it—I acknowledge and accept it, but I’ll keep moving forward without going further into that.
+
+From this point on, what I’m really focusing on is how to arrive at the final stable set of those 36,700,242 FP32 numbers.
+
+Lines 263–269 checked. The undetermined coefficients from Linear objects (excluding smear_gate) amount to 11,534,384. Since I haven't set target_param_data_ratio, it defaults to 12, so target_tokens comes out to 138,412,608.
+
+Lines 272–274 checked. With all other hyperparameters held fixed, we increased the depth from 4 to 12—which in turn changes model_dim—and got a D_REF of 1,321,210,944.
+
+Line 279 checked. I set total_batch_size to 512 for this training, so lines 280-284 are skipped this time around.
+
+Lines 287–294 checked. These lines are about correcting the learning rates. Since I haven't set the learning rates explicitly, they stay at their default values. However, the actual learning rates appear to be the default values multiplied by a scale factor computed here. That scale is the square root of my batch size of 512 divided by the optimal batch size of 524,288, which comes out to 0.3125.
+
+Lines 302–304 checked. I'm not entirely sure where weight_decay comes into play, but Karpathy goes ahead and applies a correction to it as well. The scaling factor works out to the default weight_decay of 0.28, multiplied by the square root of (512 / 524,288), and then multiplied again by the ratio of target tokens for the depth=12 model (1,321,210,944) over the target tokens we calculated earlier (138,412,608). That gives us 0.08352270741116301.
+
 # 2026-8-20 Update:
 Reading scripts/base_train.py...
 
