@@ -41,6 +41,46 @@
 # D_REF = int(12 * get_scaling_params(d12))
 # print(D_REF)
 
+
+import torch
+a = torch.empty(2*2*2)
+print(a)
+
+# from nanochat.common import compute_init, autodetect_device_type
+# device_type = autodetect_device_type()
+# ddp, ddp_rank, ddp_local_rank, ddp_world_size, device = compute_init(device_type)
+# print(device == "cuda")
+
+# from nanochat.dataloader import _document_batches
+# batches = _document_batches("train", None, 128)
+# print(batches)
+
+# import pyarrow.parquet as pq
+# filepath = "/home/shuang/.cache/nanochat/base_data_climbmix/shard_00036.parquet"
+# pf = pq.ParquetFile(filepath)
+# # print(pf.num_row_groups)
+# rg = pf.read_row_group(0)
+# batch = rg.column('text').to_pylist()
+# print(len(batch))
+
+# from nanochat.common import get_base_dir
+# import os
+# base_dir = get_base_dir()
+# data_dir = os.path.join(base_dir, "base_data_climbmix")
+# print(data_dir)
+# print(os.listdir(data_dir))
+# parquet_files = sorted([
+#     f for f in os.listdir(data_dir)
+#     if f.endswith('.parquet') and not f.endswith('.tmp')
+# ])
+# print(parquet_files[:-1])
+# print(parquet_files[-1:])
+# print(parquet_files[-1])
+
+# a = "11.sophia"
+# print(a.endswith(".sophia"))
+
+
 # class Sophia:
 #     pass
 # a = Sophia()
@@ -50,12 +90,13 @@
 # hooked = getattr(Optimizer.step, "hooked", None)
 # print(hooked)
 
-a = [1]
-a = list(a)
-print(a)
+# a = [1]
+# a = list(a)
+# print(a)
 
 # import torch
 # a = torch.empty(1,2)
+# print(a.dtype)
 # b = torch.empty(2,1)
 # c = torch.empty(1,1)
 # print(sorted({a.shape, b.shape, c.shape}))

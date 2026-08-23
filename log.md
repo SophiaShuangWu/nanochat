@@ -1,3 +1,12 @@
+# 2026-08-23 Update:
+Reading scripts/base_train.py...
+
+Lines 308–316 have been checked. Basically, what the optimizer does is pack all the model's parameters into several dicts, where each dict's "params" key corresponds to a list of parameters that share the same training configuration, specified by the dict's kind, lr, betas, eps, and weight_decay keys.
+
+Lines 318 and 324 have been checked. For our training, resuming is False and COMPUTE_DTYPE is torch.float32, so lines 319–320 and 325–326 are skipped.
+
+Lines 330-332 have been checked. It appears that train_loader is a generator object, so we need to use next(train_loader) or a for loop to retrieve the data we need. In contrast, build_val_loader is a function, so we simply call it to get the required output.
+
 # 2026-8-21 Update:
 Reading scripts/base_train.py...
 
@@ -15,7 +24,7 @@ Line 279 checked. I set total_batch_size to 512 for this training, so lines 280-
 
 Lines 287–294 checked. These lines are about correcting the learning rates. Since I haven't set the learning rates explicitly, they stay at their default values. However, the actual learning rates appear to be the default values multiplied by a scale factor computed here. That scale is the square root of my batch size of 512 divided by the optimal batch size of 524,288, which comes out to 0.3125.
 
-Lines 302–304 checked. I'm not entirely sure where weight_decay comes into play, but Karpathy goes ahead and applies a correction to it as well. The scaling factor works out to the default weight_decay of 0.28, multiplied by the square root of (512 / 524,288), and then multiplied again by the ratio of target tokens for the depth=12 model (1,321,210,944) over the target tokens we calculated earlier (138,412,608). That gives us 0.08352270741116301.
+Lines 302–304 checked. I'm not entirely sure where weight_decay comes into play, but Karpathy goes ahead and applies a correction to it as well. The scaled weight decay works out to the default weight_decay of 0.28, multiplied by the square root of (512 / 524,288), and then multiplied again by the ratio of target tokens for the depth=12 model (1,321,210,944) over the target tokens we calculated earlier (138,412,608). That gives us 0.08352270741116301. This is the scaled result, not a scale factor.
 
 # 2026-8-20 Update:
 Reading scripts/base_train.py...
