@@ -16,36 +16,57 @@
 # with torch.device("meta"):
 #     model = GPT(config)
 
-from nanochat.gpt import GPTConfig, GPT
-import torch
-def build_model_meta(depth):
-    base_dim = depth * 64
-    model_dim = ((base_dim + 128 - 1) // 128) * 128
-    num_heads = model_dim // 128
-    config = GPTConfig(
-        sequence_len=512, vocab_size=32768,
-        n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
-        window_pattern="L",
-    )
-    with torch.device("meta"):
-        model_meta = GPT(config)
-    return model_meta
-model = build_model_meta(4)
-d12 = build_model_meta(12)
+# from nanochat.gpt import GPTConfig, GPT
+# import torch
+# def build_model_meta(depth):
+#     base_dim = depth * 64
+#     model_dim = ((base_dim + 128 - 1) // 128) * 128
+#     num_heads = model_dim // 128
+#     config = GPTConfig(
+#         sequence_len=512, vocab_size=32768,
+#         n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
+#         window_pattern="L",
+#     )
+#     with torch.device("meta"):
+#         model_meta = GPT(config)
+#     return model_meta
+# model = build_model_meta(4)
+# d12 = build_model_meta(12)
 
-def get_scaling_params(m):
-    params_counts = m.num_scaling_params()
-    scaling_params = params_counts['transformer_matrices'] + params_counts['lm_head']
-    return scaling_params
-target_tokens = int(12 * get_scaling_params(model))
-D_REF = int(12 * get_scaling_params(d12))
+# def get_scaling_params(m):
+#     params_counts = m.num_scaling_params()
+#     scaling_params = params_counts['transformer_matrices'] + params_counts['lm_head']
+#     return scaling_params
+# target_tokens = int(12 * get_scaling_params(model))
+# D_REF = int(12 * get_scaling_params(d12))
+# print(D_REF)
 
-print(D_REF)
+# class Sophia:
+#     pass
+# a = Sophia()
+# print(a.__class__.__name__)
 
-import math
-weight_decay_scaled = 0.28 * math.sqrt(512 / 2**19 ) * (D_REF / target_tokens)    
-print(weight_decay_scaled)
+# from torch.optim import Optimizer
+# hooked = getattr(Optimizer.step, "hooked", None)
+# print(hooked)
 
+a = [1]
+a = list(a)
+print(a)
+
+# import torch
+# a = torch.empty(1,2)
+# b = torch.empty(2,1)
+# c = torch.empty(1,1)
+# print(sorted({a.shape, b.shape, c.shape}))
+
+# print(type({1,2}))
+# import math
+# weight_decay_scaled = 0.28 * math.sqrt(512 / 2**19 ) * (D_REF / target_tokens)    
+# print(weight_decay_scaled)
+
+# a = dict(kind='adamw')
+# print(a["kind"])
 
 # print(model._modules, model._parameters, sep='\n')
 # model.to_empty(device=torch.device("cuda"))
