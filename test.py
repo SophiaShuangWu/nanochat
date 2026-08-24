@@ -42,9 +42,45 @@
 # print(D_REF)
 
 
+# a = [1,2,3,4]
+# print(a.pop(2))
+
+
+# from nanochat.dataloader import _document_batches
+# from nanochat.tokenizer import get_tokenizer
+
+# tokenizer = get_tokenizer()
+# bos_token = tokenizer.get_bos_token_id()
+# batches = _document_batches("train", None, 128)
+# doc_batch, (pq_idx, rg_idx, epoch) = next(batches)
+# print(len(doc_batch), doc_batch[1], pq_idx, rg_idx, epoch, sep='\n')
+# token_lists = tokenizer.encode(doc_batch, prepend=bos_token, num_threads=4)
+# print(token_lists[1])
+# print(tokenizer.decode(token_lists[1]))
+
+
 import torch
-a = torch.empty(2*2*2)
-print(a)
+gpu_buffer = torch.empty(2 * 1 * 2, dtype=torch.long, device=torch.device("cuda")) # on-device buffer
+inputs = gpu_buffer[:1 * 2].view(1, 2)
+targets = gpu_buffer[1 * 2:].view(1, 2)
+gpu_buffer[0] = 1
+print(gpu_buffer, inputs,targets,sep='\n')
+
+# a = [1,2,3,4,5]
+# print(a[:-1], a[1:], sep='\n')
+
+# a = [[1,2], [1,2,3], [1]]
+# b = min(range(len(a)), key=lambda i: len(a[i]))
+# print(b)
+
+
+# import torch
+# a = torch.tensor([1,2,3], dtype=torch.long)
+# print(a, a.dtype,sep='\n')
+
+# import torch
+# a = torch.empty(2*2*2)
+# print(a)
 
 # from nanochat.common import compute_init, autodetect_device_type
 # device_type = autodetect_device_type()

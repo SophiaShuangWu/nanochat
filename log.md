@@ -1,3 +1,12 @@
+# 2026-8-24 Update:
+Reading scripts/base_train.py...
+
+Line 333 has been reviewed. For each row group in every .parquet file, we extract lists of 128-token sequences. These sequences are then used to populate a row of 513 positions. We take positions 0 through 512 as the input, and positions 1 through 513 as the target. The dataloader_state_dict tracks how many epochs we've completed across all 170 .parquet files, which file we're currently on, and which specific row group we're processing. Since each row group contains 1,024 rows, we end up pulling from the same row group eight separate times. Here, "token" refers to a token ID.
+
+Lines 338 through 357 have been reviewed. Nothing new to report.
+
+Lines 359–369 and 372–382, 385-386 are skipped for now, since they're function definitions. I'll circle back to them if any get called later.
+
 # 2026-08-23 Update:
 Reading scripts/base_train.py...
 
