@@ -1,3 +1,34 @@
+# 2026-8-25 Update:
+Reading scripts/base_train.py...
+
+Since `resuming` refers to False object, lines 392–397 were checked, and lines 398–404 were skipped.
+
+Lines 406–413 were also checked — nothing new to report. 
+
+At this stage, I'm still in "empty cup" mapping mode — just going through things line by line in a purely Pythonic way, without building conceptual connections or jumping to higher-level interpretations. That said, I can feel certain forcing tendencies trying to surface in my mind, but I'm consciously keeping my distance from them, staying calm, and just continuing to move forward in that same Pythonic, line-by-line fashion.
+
+Line 422: I was searching for the eval method inside nanochat/gpt.py and came up empty. I wondered if it had something to do with torch.compile(), or if it was just Python's built-in function. Then it hit me — I should check GPT's parent class, Module. And there it was. I'm noting this down because it's a vivid example of how reverse-checking actually works when you finally do it right.
+
+Line 423: When I checked this line, I realized my inference from the 2026-08-23 update was completely off. Every time we call build_val_loader(), we get back a generator object from tokenizing_distributed_data_loader_bos_bestfit(tokenizer, args.device_batch_size, args.max_seq_len, split="val", device=device). That means each call produces a new generator — call it as many times as we want, and we'll get that many distinct generator objects. If we actually want the content yielded by a specific generator, we need to iterate over it with next() or a for loop, not keep calling build_val_loader() over and over. I verified this with the following code:
+```python
+from nanochat.tokenizer import get_tokenizer
+tokenizer = get_tokenizer()
+import torch
+from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit
+build_val_loader = lambda: tokenizing_distributed_data_loader_bos_bestfit(tokenizer, 1, 512, split="val", device=torch.device("cuda"))
+a = build_val_loader()
+b = build_val_loader()
+print(a,b,sep='\n')
+```
+This outputs:
+```text
+<generator object tokenizing_distributed_data_loader_bos_bestfit at 0x7daf45a03f40>
+<generator object tokenizing_distributed_data_loader_bos_bestfit at 0x7daf4437d230>
+```
+This awkward example drives home the importance of testing your assumptions immediately, rather than leaving them unchecked as if they're correct. It's a matter of building the right habit.
+
+Checking line 426.
+
 # 2026-8-24 Update:
 Reading scripts/base_train.py...
 

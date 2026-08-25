@@ -16,21 +16,53 @@
 # with torch.device("meta"):
 #     model = GPT(config)
 
-# from nanochat.gpt import GPTConfig, GPT
-# import torch
-# def build_model_meta(depth):
-#     base_dim = depth * 64
-#     model_dim = ((base_dim + 128 - 1) // 128) * 128
-#     num_heads = model_dim // 128
-#     config = GPTConfig(
-#         sequence_len=512, vocab_size=32768,
-#         n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
-#         window_pattern="L",
-#     )
-#     with torch.device("meta"):
-#         model_meta = GPT(config)
-#     return model_meta
-# model = build_model_meta(4)
+from nanochat.gpt import GPTConfig, GPT
+import torch
+def build_model_meta(depth):
+    base_dim = depth * 64
+    model_dim = ((base_dim + 128 - 1) // 128) * 128
+    num_heads = model_dim // 128
+    config = GPTConfig(
+        sequence_len=512, vocab_size=32768,
+        n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
+        window_pattern="L",
+    )
+    with torch.device("meta"):
+        model_meta = GPT(config)
+    return model_meta
+model = build_model_meta(4)
+model.to_empty(device=torch.device("cuda")) 
+model.init_weights()
+# for name, module in model.named_modules():
+#     print(type(module).__name__)
+
+# print(model.eval() is model)
+
+
+from nanochat.tokenizer import get_tokenizer, get_token_bytes
+import torch
+tokenizer = get_tokenizer()
+# token_bytes = get_token_bytes(device=torch.device("cuda"))
+# print(token_bytes)
+
+from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit
+build_val_loader = lambda: tokenizing_distributed_data_loader_bos_bestfit(tokenizer, 1, 512, split="val", device=torch.device("cuda"))
+a = build_val_loader()
+batch_iter = iter(a)
+# print(a is batch_iter)
+x, y = next(batch_iter)
+print(x.size())
+print(torch.empty(2,1))
+# print(x,y,sep='\n')
+# print(not (model._backward_hooks or model._backward_pre_hooks or model._forward_hooks or model._forward_pre_hooks))
+
+# print(torch._C._get_tracing_state())
+# loss2d = model(x, y, loss_reduction='none')
+# print(loss2d)
+# b = build_val_loader()
+# print(a,b,sep='\n')
+
+
 # d12 = build_model_meta(12)
 
 # def get_scaling_params(m):
@@ -48,7 +80,6 @@
 
 # from nanochat.dataloader import _document_batches
 # from nanochat.tokenizer import get_tokenizer
-
 # tokenizer = get_tokenizer()
 # bos_token = tokenizer.get_bos_token_id()
 # batches = _document_batches("train", None, 128)
@@ -58,13 +89,25 @@
 # print(token_lists[1])
 # print(tokenizer.decode(token_lists[1]))
 
+# print(0 % 250)
 
-import torch
-gpu_buffer = torch.empty(2 * 1 * 2, dtype=torch.long, device=torch.device("cuda")) # on-device buffer
-inputs = gpu_buffer[:1 * 2].view(1, 2)
-targets = gpu_buffer[1 * 2:].view(1, 2)
-gpu_buffer[0] = 1
-print(gpu_buffer, inputs,targets,sep='\n')
+# a = 4
+# b = 3
+# c = 2
+# print(a or b % c == 0)
+
+
+# a = 1 * 512
+# b = 2 * 256
+# print(id(a) == id(b) == id(512))
+
+
+# import torch
+# gpu_buffer = torch.empty(2 * 1 * 2, dtype=torch.long, device=torch.device("cuda")) # on-device buffer
+# inputs = gpu_buffer[:1 * 2].view(1, 2)
+# targets = gpu_buffer[1 * 2:].view(1, 2)
+# gpu_buffer[0] = 1
+# print(gpu_buffer, inputs,targets,sep='\n')
 
 # a = [1,2,3,4,5]
 # print(a[:-1], a[1:], sep='\n')
