@@ -1,22 +1,5 @@
-
-
-# import argparse
-# parser = argparse.ArgumentParser()
-# parser.add_argument("--fp8", action="store_true", help="enable FP8 training")
-# args = parser.parse_args()
-# print(args.fp8)
-
-# from nanochat.gpt import GPTConfig, GPT
-# import torch
-# config = GPTConfig(
-#     sequence_len=512, vocab_size=32768,
-#     n_layer=4, n_head=2, n_kv_head=2, n_embd=256,
-#     window_pattern="L",
-# )
-# with torch.device("meta"):
-#     model = GPT(config)
-
-from nanochat.gpt import GPTConfig, GPT
+# initiate the model
+from nanochat.gpt import GPTConfig, GPT, norm
 import torch
 def build_model_meta(depth):
     base_dim = depth * 64
@@ -33,26 +16,244 @@ def build_model_meta(depth):
 model = build_model_meta(4)
 model.to_empty(device=torch.device("cuda")) 
 model.init_weights()
+
+# load tokenizer
+from nanochat.tokenizer import get_tokenizer
+tokenizer = get_tokenizer()
+
+# first eval
+from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit
+build_val_loader = lambda: tokenizing_distributed_data_loader_bos_bestfit(tokenizer, 1, 512, split="val", device=torch.device("cuda"))
+a = build_val_loader()
+batch_iter = iter(a)
+# first input token id sequence
+x, y = next(batch_iter)
+idx = x
+idy = y
+cos = model.cos[:, :512]
+sin = model.sin[:, :512]
+# transfer token id sequence to embedding sequence
+x = model.transformer.wte(idx)
+x = norm(x)
+x0 = x
+# block 0
+x = model.resid_lambdas[0] * x + model.x0_lambdas[0] * x0
+# block 0 CausalSelfAttention
+q = model.transformer.h[0].attn.c_q(norm(x)).view(1,512,2,128)
+k = model.transformer.h[0].attn.c_k(norm(x)).view(1,512,2,128)
+v = model.transformer.h[0].attn.c_v(norm(x)).view(1,512,2,128)
+x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+q, k = norm(q), norm(k)
+q, k = q * 1.2, k * 1.2
+q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+import torch.nn.functional as F
+y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+y.transpose(1,2)
+y = y.contiguous().view(1, 512, -1)
+y = model.transformer.h[0].attn.c_proj(y)
+x += y
+# block 0 MLP
+x += model.transformer.h[0].mlp.c_proj(F.relu(model.transformer.h[0].mlp.c_fc(norm(x))).square())
+# block 1
+x = model.resid_lambdas[1] * x + model.x0_lambdas[1] * x0
+ve = model.value_embeds["1"](idx)
+# block 1 CausalSelfAttention
+q = model.transformer.h[1].attn.c_q(norm(x)).view(1,512,2,128)
+k = model.transformer.h[1].attn.c_k(norm(x)).view(1,512,2,128)
+v = model.transformer.h[1].attn.c_v(norm(x)).view(1,512,2,128)
+ve = ve.view(1, 512, 2, 128)
+gate = 3 * torch.sigmoid(model.transformer.h[1].attn.ve_gate(x[..., :12]))
+v = v + gate.unsqueeze(-1) * ve
+x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+q, k = norm(q), norm(k)
+q, k = q * 1.2, k * 1.2
+q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+y.transpose(1,2)
+y = y.contiguous().view(1, 512, -1)
+y = model.transformer.h[1].attn.c_proj(y)
+x += y
+# block 1 MLP
+x += model.transformer.h[1].mlp.c_proj(F.relu(model.transformer.h[1].mlp.c_fc(norm(x))).square())
+# block 2
+x = model.resid_lambdas[2] * x + model.x0_lambdas[2] * x0
+# block 2 CausalSelfAttention
+q = model.transformer.h[2].attn.c_q(norm(x)).view(1,512,2,128)
+k = model.transformer.h[2].attn.c_k(norm(x)).view(1,512,2,128)
+v = model.transformer.h[2].attn.c_v(norm(x)).view(1,512,2,128)
+x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+q, k = norm(q), norm(k)
+q, k = q * 1.2, k * 1.2
+q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+y.transpose(1,2)
+y = y.contiguous().view(1, 512, -1)
+y = model.transformer.h[2].attn.c_proj(y)
+x += y
+# block 2 MLP
+x += model.transformer.h[2].mlp.c_proj(F.relu(model.transformer.h[2].mlp.c_fc(norm(x))).square())
+x_backout = x
+# block 3
+x = model.resid_lambdas[3] * x + model.x0_lambdas[3] * x0
+ve = model.value_embeds["3"](idx)
+# block 3 CausalSelfAttention
+q = model.transformer.h[1].attn.c_q(norm(x)).view(1,512,2,128)
+k = model.transformer.h[1].attn.c_k(norm(x)).view(1,512,2,128)
+v = model.transformer.h[1].attn.c_v(norm(x)).view(1,512,2,128)
+ve = ve.view(1, 512, 2, 128)
+gate = 3 * torch.sigmoid(model.transformer.h[3].attn.ve_gate(x[..., :12]))
+v = v + gate.unsqueeze(-1) * ve
+x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+q, k = norm(q), norm(k)
+q, k = q * 1.2, k * 1.2
+q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+y.transpose(1,2)
+y = y.contiguous().view(1, 512, -1)
+y = model.transformer.h[3].attn.c_proj(y)
+x += y
+# block 3 MLP
+x += model.transformer.h[3].mlp.c_proj(F.relu(model.transformer.h[3].mlp.c_fc(norm(x))).square())
+# End Block
+x = x - model.backout_lambda * x_backout
+x = norm(x)
+# Logits
+logits = model.lm_head(x)
+logits = 15 * torch.tanh(logits / 15)
+loss = torch._C._nn.cross_entropy_loss(logits.view(-1, logits.size(-1)), idy.view(-1), None, 0, -1, 0.0)
+# Compare two results
+loss2d = model(idx, idy, loss_reduction='none')
+print(loss2d - loss)
+
+
+
+
+
+
+
+
+
+
+# import torch
+# print(torch.sigmoid(torch.tensor([8,9,10])))
+
+# print(torch.tensor([2,3]).square())
+
+# print(F.relu(torch.tensor([2,2,-1,3,2,1.1,-9,3])))
+
+# a = q[0,0,1,:]
+# b = k[0,0,:2,:]
+# c = torch.mv(b,a)
+# c /= 128**0.5
+# w = torch.softmax(c, dim=0)
+# o = torch.mv(v[0,0,:2,:].transpose(0,1), w)
+# print(o - r[0,0,1,:])
+
+# print(cos.shape, sin.shape, q.shape, x1.shape, x2.shape, y1.shape, sep='\n')
+
+# from nanochat.gpt import norm
+# import torch
+# a = torch.empty(2,2,3,5)
+# a = a.view(2, 2, -1)
+# print(a.shape)
+# a = torch.tensor([[1.,1.,1.],[2.,2.,2.]])
+# a = norm(a)
+# print(a)
+
+# a = torch.tensor([[1,2,3]])
+# b = torch.tensor([[1,2,3], [4,5,6]])
+# c = a * b
+# print(c)
+
+
+
+# from torch.nn import Linear
+# import torch
+# a = torch.arange(6)
+# b = a.view(2,3)
+# print(a,b,sep='\n')
+# a[5] = 6
+# print(a,b,sep='\n')
+# a = Linear(2,2,bias=False)
+# print(a.weight)
+# b = torch.tensor([[[1.,0.],[1.,0.]]])
+# print(a(b))
+
+# print(model.transformer.h[0].attn.c_q)
+
+# print(model.resid_lambdas, model.x0_lambdas, sep='\n')
+# print(model.value_embeds)
+# print(model.smear_gate(x[:, 1:, :24]))
+# print(torch.sigmoid(model.smear_gate(x[:, 1:, :24])).size())
+# print(model.smear_lambda)
+# gate = model.smear_lambda * torch.sigmoid(model.smear_gate(x[:, 1:, :24]))
+# print(gate.size(), x[:, :-1].size(),sep='\n')
+# print(gate * x[:, :-1])
+# x = torch.cat([x[:, :1], x[:, 1:]],dim=1)
+# print(x.size())
+# a = torch.empty(2,2,3)
+# print(a)
+# print(a[:,:,0])
+# print(a[:,:,:1])
+# b = torch.cat([a[:,:,:1],a[:,:,1:]],dim=2)
+# print(a == b)
+# print(x,x[:, :1], x[:, 1:],sep='\n')
+# x=torch.rms_norm(x, [256])
+# x = norm(x)
+# print(torch.rms_norm(x, [256]) == norm(x))
+# print(sum(_**2 for _ in x[0,0,:]))
+# print(model.transformer.wte.weight, model.transformer.wte.padding_idx, model.transformer.wte.max_norm, 
+#       model.transformer.wte.norm_type, model.transformer.wte.scale_grad_by_freq, model.transformer.wte.sparse, sep='\n')
+# print(torch.embedding(model.transformer.wte.weight, x, -1, False, False) == model.transformer.wte(x))
+# print(model.transformer.wte(torch.arange(1,device=torch.device("cuda"))) == model.transformer.wte.weight[0,:])
+# print(model.transformer.wte(torch.tensor([32767],device=torch.device("cuda"))))
+# print(model.transformer.wte.padding_idx, model.transformer.wte.max_norm, sep='\n')
+# from torch.overrides import has_torch_function_variadic
+# print(has_torch_function_variadic(x, model.transformer.wte.weight))
+
+# print(model.cos)
+# print(model.cos.size())
+# print(model.cos[:,0:512])
+
+# import torch
+# a = torch.empty(4,4,4,4)
+# c = torch.empty(4,4,4,4)
+# print(a.shape)
+# b = a[:,0:2], c[:,0:2]
+# print(b)
+# b = a[:,:,0:2]
+# print(b.shape)
+# b = a[:,:,:,0:2]
+# print(b.shape)
+# a = torch.outer(torch.arange(4), torch.arange(3))
+# print(a)
+# a = a[None, :, None, :]
+# print(a)
+# b = a[:,2]
+# print(b)
+
+# print(torch.empty(2,2).size())
+# print(torch.arange(2))
 # for name, module in model.named_modules():
 #     print(type(module).__name__)
 
 # print(model.eval() is model)
 
 
-from nanochat.tokenizer import get_tokenizer, get_token_bytes
-import torch
-tokenizer = get_tokenizer()
-# token_bytes = get_token_bytes(device=torch.device("cuda"))
-# print(token_bytes)
 
-from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit
-build_val_loader = lambda: tokenizing_distributed_data_loader_bos_bestfit(tokenizer, 1, 512, split="val", device=torch.device("cuda"))
-a = build_val_loader()
-batch_iter = iter(a)
-# print(a is batch_iter)
-x, y = next(batch_iter)
-print(x.size())
-print(torch.empty(2,1))
+
 # print(x,y,sep='\n')
 # print(not (model._backward_hooks or model._backward_pre_hooks or model._forward_hooks or model._forward_pre_hooks))
 
@@ -159,6 +360,21 @@ print(torch.empty(2,1))
 # a = "11.sophia"
 # print(a.endswith(".sophia"))
 
+# import argparse
+# parser = argparse.ArgumentParser()
+# parser.add_argument("--fp8", action="store_true", help="enable FP8 training")
+# args = parser.parse_args()
+# print(args.fp8)
+
+# from nanochat.gpt import GPTConfig, GPT
+# import torch
+# config = GPTConfig(
+#     sequence_len=512, vocab_size=32768,
+#     n_layer=4, n_head=2, n_kv_head=2, n_embd=256,
+#     window_pattern="L",
+# )
+# with torch.device("meta"):
+#     model = GPT(config)
 
 # class Sophia:
 #     pass

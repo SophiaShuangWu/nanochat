@@ -1,3 +1,149 @@
+# 2026-8-26 Update:
+Reading scripts/base_train.py...
+
+I’ve been tracing through line 426, which leads to nanochat/loss_eval.py line 33, and from there to nanochat/gpt.py lines 459–524. I spent the whole day figuring out how the first evaluation actually works by calling the model — which means invoking the __call__ method, which in turn triggers the forward method. The test code I wrote confirms that my understanding matches exactly what happens when you call it directly. Feel free to check my test code below:
+```python
+# initiate the model
+from nanochat.gpt import GPTConfig, GPT, norm
+import torch
+def build_model_meta(depth):
+    base_dim = depth * 64
+    model_dim = ((base_dim + 128 - 1) // 128) * 128
+    num_heads = model_dim // 128
+    config = GPTConfig(
+        sequence_len=512, vocab_size=32768,
+        n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
+        window_pattern="L",
+    )
+    with torch.device("meta"):
+        model_meta = GPT(config)
+    return model_meta
+model = build_model_meta(4)
+model.to_empty(device=torch.device("cuda")) 
+model.init_weights()
+
+# load tokenizer
+from nanochat.tokenizer import get_tokenizer
+tokenizer = get_tokenizer()
+
+# first eval
+from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit
+build_val_loader = lambda: tokenizing_distributed_data_loader_bos_bestfit(tokenizer, 1, 512, split="val", device=torch.device("cuda"))
+a = build_val_loader()
+batch_iter = iter(a)
+# first input token id sequence
+x, y = next(batch_iter)
+idx = x
+idy = y
+cos = model.cos[:, :512]
+sin = model.sin[:, :512]
+# transfer token id sequence to embedding sequence
+x = model.transformer.wte(idx)
+x = norm(x)
+x0 = x
+# block 0
+x = model.resid_lambdas[0] * x + model.x0_lambdas[0] * x0
+# block 0 CausalSelfAttention
+q = model.transformer.h[0].attn.c_q(norm(x)).view(1,512,2,128)
+k = model.transformer.h[0].attn.c_k(norm(x)).view(1,512,2,128)
+v = model.transformer.h[0].attn.c_v(norm(x)).view(1,512,2,128)
+x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+q, k = norm(q), norm(k)
+q, k = q * 1.2, k * 1.2
+q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+import torch.nn.functional as F
+y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+y.transpose(1,2)
+y = y.contiguous().view(1, 512, -1)
+y = model.transformer.h[0].attn.c_proj(y)
+x += y
+# block 0 MLP
+x += model.transformer.h[0].mlp.c_proj(F.relu(model.transformer.h[0].mlp.c_fc(norm(x))).square())
+# block 1
+x = model.resid_lambdas[1] * x + model.x0_lambdas[1] * x0
+ve = model.value_embeds["1"](idx)
+# block 1 CausalSelfAttention
+q = model.transformer.h[1].attn.c_q(norm(x)).view(1,512,2,128)
+k = model.transformer.h[1].attn.c_k(norm(x)).view(1,512,2,128)
+v = model.transformer.h[1].attn.c_v(norm(x)).view(1,512,2,128)
+ve = ve.view(1, 512, 2, 128)
+gate = 3 * torch.sigmoid(model.transformer.h[1].attn.ve_gate(x[..., :12]))
+v = v + gate.unsqueeze(-1) * ve
+x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+q, k = norm(q), norm(k)
+q, k = q * 1.2, k * 1.2
+q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+y.transpose(1,2)
+y = y.contiguous().view(1, 512, -1)
+y = model.transformer.h[1].attn.c_proj(y)
+x += y
+# block 1 MLP
+x += model.transformer.h[1].mlp.c_proj(F.relu(model.transformer.h[1].mlp.c_fc(norm(x))).square())
+# block 2
+x = model.resid_lambdas[2] * x + model.x0_lambdas[2] * x0
+# block 2 CausalSelfAttention
+q = model.transformer.h[2].attn.c_q(norm(x)).view(1,512,2,128)
+k = model.transformer.h[2].attn.c_k(norm(x)).view(1,512,2,128)
+v = model.transformer.h[2].attn.c_v(norm(x)).view(1,512,2,128)
+x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+q, k = norm(q), norm(k)
+q, k = q * 1.2, k * 1.2
+q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+y.transpose(1,2)
+y = y.contiguous().view(1, 512, -1)
+y = model.transformer.h[2].attn.c_proj(y)
+x += y
+# block 2 MLP
+x += model.transformer.h[2].mlp.c_proj(F.relu(model.transformer.h[2].mlp.c_fc(norm(x))).square())
+x_backout = x
+# block 3
+x = model.resid_lambdas[3] * x + model.x0_lambdas[3] * x0
+ve = model.value_embeds["3"](idx)
+# block 3 CausalSelfAttention
+q = model.transformer.h[1].attn.c_q(norm(x)).view(1,512,2,128)
+k = model.transformer.h[1].attn.c_k(norm(x)).view(1,512,2,128)
+v = model.transformer.h[1].attn.c_v(norm(x)).view(1,512,2,128)
+ve = ve.view(1, 512, 2, 128)
+gate = 3 * torch.sigmoid(model.transformer.h[3].attn.ve_gate(x[..., :12]))
+v = v + gate.unsqueeze(-1) * ve
+x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+q, k = norm(q), norm(k)
+q, k = q * 1.2, k * 1.2
+q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+y.transpose(1,2)
+y = y.contiguous().view(1, 512, -1)
+y = model.transformer.h[3].attn.c_proj(y)
+x += y
+# block 3 MLP
+x += model.transformer.h[3].mlp.c_proj(F.relu(model.transformer.h[3].mlp.c_fc(norm(x))).square())
+# End Block
+x = x - model.backout_lambda * x_backout
+x = norm(x)
+# Logits
+logits = model.lm_head(x)
+logits = 15 * torch.tanh(logits / 15)
+loss = torch._C._nn.cross_entropy_loss(logits.view(-1, logits.size(-1)), idy.view(-1), None, 0, -1, 0.0)
+# Compare two results
+loss2d = model(idx, idy, loss_reduction='none')
+print(loss2d - loss)
+```
+I’ve also come to realize that when I get lucky, it’s not smart to thank my gifts — and when I’m unlucky, it’s not fair to blame my own stupidity. Either way, I’ll keep moving forward, now on line 426 -> nanochat/loss_eval.py line 34.
+
 # 2026-8-25 Update:
 Reading scripts/base_train.py...
 
