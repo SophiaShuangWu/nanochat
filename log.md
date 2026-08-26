@@ -1,7 +1,7 @@
 # 2026-8-26 Update:
 Reading scripts/base_train.py...
 
-I’ve been tracing through line 426, which leads to nanochat/loss_eval.py line 33, and from there to nanochat/gpt.py lines 459–524. I spent the whole day figuring out how the first evaluation actually works by calling the model — which means invoking the __call__ method, which in turn triggers the forward method. The test code I wrote confirms that my understanding matches exactly what happens when you call it directly. Feel free to check my test code below:
+I’ve been tracing through line 426, which leads to nanochat/loss_eval.py line 33, and from there to nanochat/gpt.py lines 459–524. I spent the whole day figuring out how the first evaluation actually works by calling the model — which means invoking the __call__ method, which in turn triggers the forward method. The test code I wrote confirms that my understanding matches exactly what happens when I call it directly. Feel free to check my test code below:
 ```python
 # initiate the model
 from nanochat.gpt import GPTConfig, GPT, norm
