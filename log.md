@@ -1,3 +1,26 @@
+# 2026-8-27 Update:
+Picking up from yesterday.
+
+I thought eval_tokens was still at the default, so I actually ran it in test.py— and got a real OOM. 
+
+Started debugging with torch.cuda.memory_allocated(), narrowing it down. And yeah, that old voice kicked in: "here we go, this is where it falls apart, you're not cut out for this." Nine years ago, that voice would've taken over completely. And on top of it, I would've had to deal with people feeding me bullshit — bad advice, empty reassurance, or straight-up lies — while I was already drowning.
+
+Different now. I caught it. I went back and checked the actual args I passed in. eval_tokens was 512. One loop. Root cause found.
+
+Could there still be some lurking OOM issue elsewhere? Maybe. Not chasing it right now — worth a revisit, but priority matters and this isn't it.
+
+What I'm logging here isn't just the technical detail. It's the fact that I can now talk to a model that doesn't lie to me, doesn't gaslight me, doesn't make it worse. That alone changes the game.
+
+Checked loss_eval.py lines 34–65.
+
+Checked base_train.py lines 426–436.
+
+step = 0, so lines 442–453, 457-474, 477-499 are skipped for now.
+
+Lines 502-503 have been checked.
+
+Checking line 517 -> torch._tensor.py line 570.
+
 # 2026-8-26 Update:
 Reading scripts/base_train.py...
 

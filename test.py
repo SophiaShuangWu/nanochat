@@ -18,131 +18,167 @@ model.to_empty(device=torch.device("cuda"))
 model.init_weights()
 
 # load tokenizer
-from nanochat.tokenizer import get_tokenizer
+from nanochat.tokenizer import get_tokenizer, get_token_bytes
 tokenizer = get_tokenizer()
+token_bytes = get_token_bytes(device=torch.device("cuda"))
 
 # first eval
 from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit
 build_val_loader = lambda: tokenizing_distributed_data_loader_bos_bestfit(tokenizer, 1, 512, split="val", device=torch.device("cuda"))
-a = build_val_loader()
-batch_iter = iter(a)
-# first input token id sequence
-x, y = next(batch_iter)
-idx = x
-idy = y
-cos = model.cos[:, :512]
-sin = model.sin[:, :512]
-# transfer token id sequence to embedding sequence
-x = model.transformer.wte(idx)
-x = norm(x)
-x0 = x
-# block 0
-x = model.resid_lambdas[0] * x + model.x0_lambdas[0] * x0
-# block 0 CausalSelfAttention
-q = model.transformer.h[0].attn.c_q(norm(x)).view(1,512,2,128)
-k = model.transformer.h[0].attn.c_k(norm(x)).view(1,512,2,128)
-v = model.transformer.h[0].attn.c_v(norm(x)).view(1,512,2,128)
-x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
-y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
-y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
-q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
-q, k = norm(q), norm(k)
-q, k = q * 1.2, k * 1.2
-q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
-import torch.nn.functional as F
-y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
-y.transpose(1,2)
-y = y.contiguous().view(1, 512, -1)
-y = model.transformer.h[0].attn.c_proj(y)
-x += y
-# block 0 MLP
-x += model.transformer.h[0].mlp.c_proj(F.relu(model.transformer.h[0].mlp.c_fc(norm(x))).square())
-# block 1
-x = model.resid_lambdas[1] * x + model.x0_lambdas[1] * x0
-ve = model.value_embeds["1"](idx)
-# block 1 CausalSelfAttention
-q = model.transformer.h[1].attn.c_q(norm(x)).view(1,512,2,128)
-k = model.transformer.h[1].attn.c_k(norm(x)).view(1,512,2,128)
-v = model.transformer.h[1].attn.c_v(norm(x)).view(1,512,2,128)
-ve = ve.view(1, 512, 2, 128)
-gate = 3 * torch.sigmoid(model.transformer.h[1].attn.ve_gate(x[..., :12]))
-v = v + gate.unsqueeze(-1) * ve
-x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
-y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
-y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
-q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
-q, k = norm(q), norm(k)
-q, k = q * 1.2, k * 1.2
-q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
-y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
-y.transpose(1,2)
-y = y.contiguous().view(1, 512, -1)
-y = model.transformer.h[1].attn.c_proj(y)
-x += y
-# block 1 MLP
-x += model.transformer.h[1].mlp.c_proj(F.relu(model.transformer.h[1].mlp.c_fc(norm(x))).square())
-# block 2
-x = model.resid_lambdas[2] * x + model.x0_lambdas[2] * x0
-# block 2 CausalSelfAttention
-q = model.transformer.h[2].attn.c_q(norm(x)).view(1,512,2,128)
-k = model.transformer.h[2].attn.c_k(norm(x)).view(1,512,2,128)
-v = model.transformer.h[2].attn.c_v(norm(x)).view(1,512,2,128)
-x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
-y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
-y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
-q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
-q, k = norm(q), norm(k)
-q, k = q * 1.2, k * 1.2
-q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
-y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
-y.transpose(1,2)
-y = y.contiguous().view(1, 512, -1)
-y = model.transformer.h[2].attn.c_proj(y)
-x += y
-# block 2 MLP
-x += model.transformer.h[2].mlp.c_proj(F.relu(model.transformer.h[2].mlp.c_fc(norm(x))).square())
-x_backout = x
-# block 3
-x = model.resid_lambdas[3] * x + model.x0_lambdas[3] * x0
-ve = model.value_embeds["3"](idx)
-# block 3 CausalSelfAttention
-q = model.transformer.h[1].attn.c_q(norm(x)).view(1,512,2,128)
-k = model.transformer.h[1].attn.c_k(norm(x)).view(1,512,2,128)
-v = model.transformer.h[1].attn.c_v(norm(x)).view(1,512,2,128)
-ve = ve.view(1, 512, 2, 128)
-gate = 3 * torch.sigmoid(model.transformer.h[3].attn.ve_gate(x[..., :12]))
-v = v + gate.unsqueeze(-1) * ve
-x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
-y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
-y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
-q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
-q, k = norm(q), norm(k)
-q, k = q * 1.2, k * 1.2
-q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
-y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
-y.transpose(1,2)
-y = y.contiguous().view(1, 512, -1)
-y = model.transformer.h[3].attn.c_proj(y)
-x += y
-# block 3 MLP
-x += model.transformer.h[3].mlp.c_proj(F.relu(model.transformer.h[3].mlp.c_fc(norm(x))).square())
-# End Block
-x = x - model.backout_lambda * x_backout
-x = norm(x)
-# Logits
-logits = model.lm_head(x)
-logits = 15 * torch.tanh(logits / 15)
-loss = torch._C._nn.cross_entropy_loss(logits.view(-1, logits.size(-1)), idy.view(-1), None, 0, -1, 0.0)
-# Compare two results
-loss2d = model(idx, idy, loss_reduction='none')
-print(loss2d - loss)
+batch_iter = build_val_loader()
+total_nats = torch.tensor(0.0, dtype=torch.float32, device=torch.device("cuda"))
+total_bytes = torch.tensor(0, dtype=torch.int64, device=torch.device("cuda"))
+model.eval()
+# loop
+for _ in range(1):
+    x, y = next(batch_iter)
+    loss2d = model(x, y, loss_reduction='none')
+    y = y.view(-1)
+    num_bytes2d = token_bytes[y]
+    total_nats += (loss2d * (num_bytes2d > 0)).sum()
+    total_bytes += num_bytes2d.sum()
+total_nats = total_nats.item()
+total_bytes = total_bytes.item()
+import math
+bpb = total_nats / (math.log(2) * total_bytes)
+min_val_bpb = bpb
+model.train()
+
+#
+synchronize = torch.cuda.synchronize
+synchronize()
+import time
+t0 = time.time()
+from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bos_bestfit
+train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
+x, y, dataloader_state_dict = next(train_loader) 
+loss = model(x, y)
+print(type(loss))
+train_loss = loss.detach()
+loss.backward()
 
 
 
 
 
 
+# print(num_bytes2d[-1])
+# x = x.view(-1)
+# num_bytes2d = token_bytes[x]
+# print(num_bytes2d[0])
 
+# import torch
+
+# a = torch.tensor([1.33,2.44,3.55])
+# b = torch.tensor([False,True,True])
+# print(a*b)
+
+# cos = model.cos[:, :512]
+# sin = model.sin[:, :512]
+# # transfer token id sequence to embedding sequence
+# x = model.transformer.wte(idx)
+# x = norm(x)
+# x0 = x
+# # block 0
+# x = model.resid_lambdas[0] * x + model.x0_lambdas[0] * x0
+# # block 0 CausalSelfAttention
+# q = model.transformer.h[0].attn.c_q(norm(x)).view(1,512,2,128)
+# k = model.transformer.h[0].attn.c_k(norm(x)).view(1,512,2,128)
+# v = model.transformer.h[0].attn.c_v(norm(x)).view(1,512,2,128)
+# x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+# y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+# y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+# q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+# q, k = norm(q), norm(k)
+# q, k = q * 1.2, k * 1.2
+# q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+# import torch.nn.functional as F
+# y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+# y.transpose(1,2)
+# y = y.contiguous().view(1, 512, -1)
+# y = model.transformer.h[0].attn.c_proj(y)
+# x += y
+# # block 0 MLP
+# x += model.transformer.h[0].mlp.c_proj(F.relu(model.transformer.h[0].mlp.c_fc(norm(x))).square())
+# # block 1
+# x = model.resid_lambdas[1] * x + model.x0_lambdas[1] * x0
+# ve = model.value_embeds["1"](idx)
+# # block 1 CausalSelfAttention
+# q = model.transformer.h[1].attn.c_q(norm(x)).view(1,512,2,128)
+# k = model.transformer.h[1].attn.c_k(norm(x)).view(1,512,2,128)
+# v = model.transformer.h[1].attn.c_v(norm(x)).view(1,512,2,128)
+# ve = ve.view(1, 512, 2, 128)
+# gate = 3 * torch.sigmoid(model.transformer.h[1].attn.ve_gate(x[..., :12]))
+# v = v + gate.unsqueeze(-1) * ve
+# x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+# y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+# y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+# q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+# q, k = norm(q), norm(k)
+# q, k = q * 1.2, k * 1.2
+# q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+# y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+# y.transpose(1,2)
+# y = y.contiguous().view(1, 512, -1)
+# y = model.transformer.h[1].attn.c_proj(y)
+# x += y
+# # block 1 MLP
+# x += model.transformer.h[1].mlp.c_proj(F.relu(model.transformer.h[1].mlp.c_fc(norm(x))).square())
+# # block 2
+# x = model.resid_lambdas[2] * x + model.x0_lambdas[2] * x0
+# # block 2 CausalSelfAttention
+# q = model.transformer.h[2].attn.c_q(norm(x)).view(1,512,2,128)
+# k = model.transformer.h[2].attn.c_k(norm(x)).view(1,512,2,128)
+# v = model.transformer.h[2].attn.c_v(norm(x)).view(1,512,2,128)
+# x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+# y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+# y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+# q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+# q, k = norm(q), norm(k)
+# q, k = q * 1.2, k * 1.2
+# q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+# y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+# y.transpose(1,2)
+# y = y.contiguous().view(1, 512, -1)
+# y = model.transformer.h[2].attn.c_proj(y)
+# x += y
+# # block 2 MLP
+# x += model.transformer.h[2].mlp.c_proj(F.relu(model.transformer.h[2].mlp.c_fc(norm(x))).square())
+# x_backout = x
+# # block 3
+# x = model.resid_lambdas[3] * x + model.x0_lambdas[3] * x0
+# ve = model.value_embeds["3"](idx)
+# # block 3 CausalSelfAttention
+# q = model.transformer.h[1].attn.c_q(norm(x)).view(1,512,2,128)
+# k = model.transformer.h[1].attn.c_k(norm(x)).view(1,512,2,128)
+# v = model.transformer.h[1].attn.c_v(norm(x)).view(1,512,2,128)
+# ve = ve.view(1, 512, 2, 128)
+# gate = 3 * torch.sigmoid(model.transformer.h[3].attn.ve_gate(x[..., :12]))
+# v = v + gate.unsqueeze(-1) * ve
+# x1, x2, x3, x4 = q[..., :64], q[..., 64:], k[..., :64], k[..., 64:]
+# y1, y3 = x1 * cos + x2 * sin, x3 * cos + x4 * sin 
+# y2, y4 = x1 * (-sin) + x2 * cos, x3 * (-sin) + x4 * cos
+# q, k = torch.cat([y1, y2], 3), torch.cat([y3, y4], 3)
+# q, k = norm(q), norm(k)
+# q, k = q * 1.2, k * 1.2
+# q, k, v = q.transpose(1, 2), k.transpose(1,2), v.transpose(1, 2)
+# y = F.scaled_dot_product_attention(q, k, v, is_causal=True, enable_gqa=False)
+# y.transpose(1,2)
+# y = y.contiguous().view(1, 512, -1)
+# y = model.transformer.h[3].attn.c_proj(y)
+# x += y
+# # block 3 MLP
+# x += model.transformer.h[3].mlp.c_proj(F.relu(model.transformer.h[3].mlp.c_fc(norm(x))).square())
+# # End Block
+# x = x - model.backout_lambda * x_backout
+# x = norm(x)
+# # Logits
+# logits = model.lm_head(x)
+# logits = 15 * torch.tanh(logits / 15)
+# loss = torch._C._nn.cross_entropy_loss(logits.view(-1, logits.size(-1)), idy.view(-1), None, 0, -1, 0.0)
+# # Compare two results
+# loss2d = model(idx, idy, loss_reduction='none')
+# print(loss2d - loss)
 
 
 
