@@ -1,3 +1,10 @@
+# 2026-8-28 Update:
+Checking line 517 -> torch._tensor.py line 625 -> torch.autograd.__init__.py line 354 -> torch.autograd.graph.py line 841 -> torch._C.__init__.pyi line 2101.
+
+I discussed this with DeepSeek and came to understand that loss.backward() updates the grad attribute of every parameter involved in computing the loss. Since x and y are just the input and target token ID sequences—they have nothing to do with the model itself—their requires_grad was never set to True, so their grad attribute stays None.
+
+This should be at the top of my priority list. It's a great opportunity for me—for the first time, without relying on hazy memories of lectures or getting lost in abstract math, but instead making concrete, tangible progress. This will be the first time I truly build my own hands-on intuition for the math. I'll keep the process clear and methodical, taking each step as steadily as I can.
+
 # 2026-8-27 Update:
 Picking up from yesterday.
 

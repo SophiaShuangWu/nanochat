@@ -17,49 +17,144 @@ model = build_model_meta(4)
 model.to_empty(device=torch.device("cuda")) 
 model.init_weights()
 
-# load tokenizer
-from nanochat.tokenizer import get_tokenizer, get_token_bytes
-tokenizer = get_tokenizer()
-token_bytes = get_token_bytes(device=torch.device("cuda"))
+print(model.transformer.wte.weight.is_leaf)
 
-# first eval
-from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit
-build_val_loader = lambda: tokenizing_distributed_data_loader_bos_bestfit(tokenizer, 1, 512, split="val", device=torch.device("cuda"))
-batch_iter = build_val_loader()
-total_nats = torch.tensor(0.0, dtype=torch.float32, device=torch.device("cuda"))
-total_bytes = torch.tensor(0, dtype=torch.int64, device=torch.device("cuda"))
-model.eval()
-# loop
-for _ in range(1):
-    x, y = next(batch_iter)
-    loss2d = model(x, y, loss_reduction='none')
-    y = y.view(-1)
-    num_bytes2d = token_bytes[y]
-    total_nats += (loss2d * (num_bytes2d > 0)).sum()
-    total_bytes += num_bytes2d.sum()
-total_nats = total_nats.item()
-total_bytes = total_bytes.item()
-import math
-bpb = total_nats / (math.log(2) * total_bytes)
-min_val_bpb = bpb
-model.train()
+# # load tokenizer
+# from nanochat.tokenizer import get_tokenizer, get_token_bytes
+# tokenizer = get_tokenizer()
+# token_bytes = get_token_bytes(device=torch.device("cuda"))
 
-#
-synchronize = torch.cuda.synchronize
-synchronize()
-import time
-t0 = time.time()
-from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bos_bestfit
-train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
-x, y, dataloader_state_dict = next(train_loader) 
-loss = model(x, y)
-print(type(loss))
-train_loss = loss.detach()
-loss.backward()
+# # first eval
+# from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit
+# build_val_loader = lambda: tokenizing_distributed_data_loader_bos_bestfit(tokenizer, 1, 512, split="val", device=torch.device("cuda"))
+# batch_iter = build_val_loader()
+# total_nats = torch.tensor(0.0, dtype=torch.float32, device=torch.device("cuda"))
+# total_bytes = torch.tensor(0, dtype=torch.int64, device=torch.device("cuda"))
+# model.eval()
+# # loop
+# for _ in range(1):
+#     x, y = next(batch_iter)
+#     loss2d = model(x, y, loss_reduction='none')
+#     y = y.view(-1)
+#     num_bytes2d = token_bytes[y]
+#     total_nats += (loss2d * (num_bytes2d > 0)).sum()
+#     total_bytes += num_bytes2d.sum()
+# total_nats = total_nats.item()
+# total_bytes = total_bytes.item()
+# import math
+# bpb = total_nats / (math.log(2) * total_bytes)
+# min_val_bpb = bpb
+# model.train()
 
+# #
+# synchronize = torch.cuda.synchronize
+# synchronize()
+# import time
+# t0 = time.time()
+# from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bos_bestfit
+# train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
+# x, y, dataloader_state_dict = next(train_loader) 
+# loss = model(x, y)
 
 
 
+
+# import torch
+# row_buffer = torch.empty((1, 513), dtype=torch.long)
+# print(row_buffer.requires_grad)
+
+
+
+
+
+
+# print(x.requires_grad, y.requires_grad, sep='\n')
+
+# print(x.grad, y.grad, sep='\n')
+
+# loss.backward()
+
+# print(x.grad, y.grad, sep='\n')
+
+
+
+
+
+
+# print(x.grad_fn, y.grad_fn, sep='\n')
+
+# print(torch.autograd.variable.Variable._execution_engine.run_backward((loss,), 
+#                                                                 (torch.ones_like(loss, memory_format=torch.preserve_format),),
+#                                                                 False, False, (), True, True))
+
+# import logging
+# log = logging.getLogger(__name__)
+
+# print(log.getEffectiveLevel())
+# print(logging.DEBUG)
+
+# print(torch.autograd.graph._engine_run_backward((loss,), (torch.ones_like(loss, memory_format=torch.preserve_format),),
+#                                                 False, False, (), True, True))
+
+# print(torch.autograd._make_grads((loss,), (None,), False))
+
+# print(torch.ones_like(loss, memory_format=torch.preserve_format))
+
+# print(loss.dtype.is_floating_point)
+
+# import torch
+# a = torch.empty(2,2,3,5)
+# print(a.numel())
+
+
+# print(loss.numel())
+
+
+# print(loss.requires_grad)
+
+# import torch
+# print(isinstance(None, torch.Tensor))
+
+
+# print(loss.shape)
+
+# print(loss.is_nested)
+
+# print(isinstance(loss, torch.autograd.graph.GradientEdge))
+
+# print(zip((loss,), (None,)))
+
+# a = (loss,)
+# print(torch.autograd._tensor_or_tensors_to_tuple(None, len(a)))
+
+# torch.autograd.backward(loss)
+
+
+# print(loss, x, y, sep='\n')
+# print(len(loss))
+
+# a = torch.tensor(0)
+# print(a)
+
+
+# a = (None,)
+# print(a * 2)
+
+
+# a = None
+# print(id(a))
+# import sys
+# print(sys.getsizeof(a))
+
+# a = tuple[torch.Tensor]
+# print(type(a))
+
+# from torch.overrides import is_tensor_like
+# print(is_tensor_like(loss))
+# print(torch._C._are_functorch_transforms_active())
+# from torch.overrides import has_torch_function_unary
+# print(has_torch_function_unary(loss))
+# loss.backward()
 
 
 # print(num_bytes2d[-1])
