@@ -1,3 +1,14 @@
+# 2026-8-31 Update:
+I'm back. The marketing side is being obscure, HR won't give me valid feedback, and the so-called tech leads just read my messages without saying anything. Why does genuine communication always get met with such a cold response? Well, the only thing I can do is stay focused on the project and avoid getting pulled into anything irrelevant.
+
+I'm still stuck on backward(). While checking the gradient changes for the smear_gate parameter, I got confused between x[:,:-1] and x[...,:-1], and I also mixed up the shape of smear_gate.weight—thought it was 2x24, but it's actually 1x24.
+
+Even though I keep running into dead ends with the job market and feel like a lot of my passion is going to waste, and I'm exhausted—when I come back to the code, I can still pick up where I left off three days ago. That said, I do need to double-check the details.
+
+This kind of organization and number-crunching requires careful attention, because it's not something we use in daily life.
+
+I know some people—especially in tech—might look down on me for being emotional or easily frustrated. My only response is: I'm going to keep making progress anyway. The ones who want to play it safe and project an authoritative image just to make others give up? I'm not even going to acknowledge that. Let's pick this up again tomorrow morning.
+
 # 2026-8-28 Update:
 Checking line 517 -> torch._tensor.py line 625 -> torch.autograd.__init__.py line 354 -> torch.autograd.graph.py line 841 -> torch._C.__init__.pyi line 2101.
 

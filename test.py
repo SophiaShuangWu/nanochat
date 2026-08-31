@@ -17,11 +17,9 @@ model = build_model_meta(4)
 model.to_empty(device=torch.device("cuda")) 
 model.init_weights()
 
-print(model.transformer.wte.weight.is_leaf)
-
-# # load tokenizer
-# from nanochat.tokenizer import get_tokenizer, get_token_bytes
-# tokenizer = get_tokenizer()
+# load tokenizer
+from nanochat.tokenizer import get_tokenizer, get_token_bytes
+tokenizer = get_tokenizer()
 # token_bytes = get_token_bytes(device=torch.device("cuda"))
 
 # # first eval
@@ -51,10 +49,31 @@ print(model.transformer.wte.weight.is_leaf)
 # synchronize()
 # import time
 # t0 = time.time()
-# from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bos_bestfit
-# train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
-# x, y, dataloader_state_dict = next(train_loader) 
+from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bos_bestfit
+train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
+idx, idy, dataloader_state_dict = next(train_loader) 
+
+x = model.transformer.wte(idx)
+print(x[:, :-1].shape)
+# print(model.smear_gate.weight.shape)
+# y = model.smear_gate(x[:, 1:, :24])
+# print(y.shape)
+# gate = model.smear_lambda.to(x.dtype) * torch.sigmoid(model.smear_gate(x[:, 1:, :24]))
+# print(gate.shape)
+
+
+
+
+
 # loss = model(x, y)
+
+# print(model.smear_lambda.grad)
+
+# loss.backward()
+# print(model.smear_lambda.grad)
+
+# print(model.transformer.h[0].attn.c_proj.weight.grad)
+
 
 
 
