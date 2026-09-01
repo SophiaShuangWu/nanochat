@@ -53,8 +53,8 @@ from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bo
 train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
 idx, idy, dataloader_state_dict = next(train_loader) 
 
-x = model.transformer.wte(idx)
-print(x[:, :-1].shape)
+# x = model.transformer.wte(idx)
+# print(x[:, :-1].shape)
 # print(model.smear_gate.weight.shape)
 # y = model.smear_gate(x[:, 1:, :24])
 # print(y.shape)
@@ -63,13 +63,15 @@ print(x[:, :-1].shape)
 
 
 
+# print(model.transformer.wte.weight.grad)
 
+loss = model(idx, idy)
+loss.backward()
 
-# loss = model(x, y)
+print((model.transformer.wte.weight.grad>0).any())
 
 # print(model.smear_lambda.grad)
 
-# loss.backward()
 # print(model.smear_lambda.grad)
 
 # print(model.transformer.h[0].attn.c_proj.weight.grad)

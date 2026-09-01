@@ -1,3 +1,56 @@
+# 2026-09-01 Update:
+Interesting thing happened. I remembered that loss.backward() updates—or rather, adds to—the grad attribute of any leaf parameter involved in the loss computation. But I always thought of the grad attribute as the gradient of the parameter with respect to some variables, and that its shape matches the parameter itself. So then what are those variables? And how is the gradient of the parameters even inferred?
+
+I was hit with a wave of anxiety and couldn't quite shake the unease. After talking it through with DeepSeek, I realized that the grad attribute isn't the gradient of the parameter per se—it's the partial derivative of the loss with respect to that parameter, considered as one component of the overall loss gradient. That finally explains why the shape of grad always matches the shape of its corresponding parameter.
+
+By discussing with DeepSeek, I also corrected one of my misunderstandings about device_batch_size. I used to think batch_size referred to the number of batches, but now I get it—it's actually the number of units processed in a single batch. More specifically, I realized that device_batch_size means how many sequences a single device (i.e., GPU) processes at one time, and max_seq_len is the length of each sequence in terms of token IDs. I double-checked this with DeepSeek and confirmed that a batch is made up of sequences, not tokens. So the flow is: multiple GPUs → multiple batches per GPU → each batch contains device_batch_size sequences → each sequence has max_seq_len tokens. So ultimately, many GPUs -> many batches -> many sequences -> many token IDs.
+
+Right now, I'm working from the very beginning of the forward method in the GPT class, but I'm approaching it in a linear algebra way, rather than just checking the code-which I've already done. It should be pretty straightforward—we have definite input values, we can record the computation at each node, and then plug those inputs into the partial derivative expression for that node. Multiply that by the already computed gradient component, and we get the partial derivative from the loss all the way back to the input of the current node. This is more of a linear algebra exercise than a Pythonic one, and I need to get more comfortable with how torch.tensors handle this. But overall, it's simple: you set up a model, initialize the parameters, feed in sequences, compute the output, and get the loss via cross_entropy(logits, target). We understand the whole computation graph—each node and its operation—so calling loss.backward() just accumulates the gradient of the loss with respect to every parameter involved in the forward pass into the .grad attribute.
+
+My way of approaching math has always been pretty childish. For a long time, I felt that as long as I could grasp the intuition behind a math concept, I was fine using it to solve problems. But if something felt completely unintuitive, I'd avoid it and secretly wonder if I just wasn't smart enough. Linear algebra was one of those vague things when I was first introduced to it. I remember one afternoon after two classes, I was doing homework and found it tricky. I thought I should spend more time really understanding it, but I got distracted by hanging out with girls and just put it aside. So it's not totally unfamiliar to me—it's more like scattered stars that I can see but never played with freely within a clear rule-based framework. Now feels like a great time to change that, especially since I've successfully learned to speak Suzhou dialect, which is one of the harder Chinese dialects to pick up, but not completely foreign to me since my mother's family speaks a Wu-like language. That success gives me confidence to approach math in a new, more respectful way.
+
+Whenever I feel nervous about reaching out to HRs, I just do it directly instead of distracting myself with other things.
+
+I also need to adjust my diet to make sure I can put in the necessary hours on this project. Nanochat is really fun. Here's some test code I used today:
+```python
+# initiate the model
+from nanochat.gpt import GPTConfig, GPT, norm
+import torch
+def build_model_meta(depth):
+    base_dim = depth * 64
+    model_dim = ((base_dim + 128 - 1) // 128) * 128
+    num_heads = model_dim // 128
+    config = GPTConfig(
+        sequence_len=512, vocab_size=32768,
+        n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
+        window_pattern="L",
+    )
+    with torch.device("meta"):
+        model_meta = GPT(config)
+    return model_meta
+model = build_model_meta(4)
+model.to_empty(device=torch.device("cuda")) 
+model.init_weights()
+
+# load tokenizer
+from nanochat.tokenizer import get_tokenizer, get_token_bytes
+tokenizer = get_tokenizer()
+
+from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bos_bestfit
+train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
+idx, idy, dataloader_state_dict = next(train_loader) 
+
+loss = model(idx, idy)
+loss.backward()
+
+print((model.transformer.wte.weight.grad>0).any())
+```
+Output:
+```text
+tensor(True, device='cuda:0')
+```
+Though model.transformer.wte.weight seems to consist of all empty elements, if we check it, we'll see that the grad actually exists.
+
 # 2026-8-31 Update:
 I'm back. The marketing side is being obscure, HR won't give me valid feedback, and the so-called tech leads just read my messages without saying anything. Why does genuine communication always get met with such a cold response? Well, the only thing I can do is stay focused on the project and avoid getting pulled into anything irrelevant.
 
