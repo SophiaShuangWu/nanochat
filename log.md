@@ -1,3 +1,73 @@
+# 2026-09-02 Update:
+Today we're talking about the very first grad_fn: EmbeddingBackward0.
+The tensor wte.weight is a vocab_size x n_embd matrix—let's call it w. This is the tensor we need to accumulate partial derivative onto its .grad attribute.
+The other input is idx, a tensor of shape device_batch_size x max_seq_len, and we don't need the derivative of the loss with respect to it.
+```python
+# initiate the model
+from nanochat.gpt import GPTConfig, GPT, norm
+import torch
+def build_model_meta(depth):
+    base_dim = depth * 64
+    model_dim = ((base_dim + 128 - 1) // 128) * 128
+    num_heads = model_dim // 128
+    config = GPTConfig(
+        sequence_len=512, vocab_size=32768,
+        n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
+        window_pattern="L",
+    )
+    with torch.device("meta"):
+        model_meta = GPT(config)
+    return model_meta
+model = build_model_meta(4)
+model.to_empty(device=torch.device("cuda")) 
+model.init_weights()
+
+# load tokenizer
+from nanochat.tokenizer import get_tokenizer
+tokenizer = get_tokenizer()
+
+# generate input and target
+from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bos_bestfit
+train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
+idx, idy, dataloader_state_dict = next(train_loader) 
+
+# forward and backward
+x = model.transformer.wte(idx)
+print(x.grad_fn)
+print(x.grad_fn.next_functions)
+```
+Output:
+```text
+<EmbeddingBackward0 object at 0x7a18f83c3e20>
+((<AccumulateGrad object at 0x7a18f83c3dc0>, 0),)
+```
+
+During the forward pass, we have:
+x[m][n][k] = w[idx[m][n]][k]
+So x ends up as a device_batch_size x max_seq_len x n_embd tensor.
+
+In the backward pass, we already have the partial derivatives of the loss with respect to each x[m][n][k]. What we actually need is the partial derivative of the loss with respect to each w[i][j].
+
+I spent this afternoon wrestling with this, and I’d like to share what I learned. Try not to get overwhelmed by the chain rule—yes, x has a huge number of elements (device_batch_size * max_seq_len * n_embd), which is a lot to wrap your head around. But before you get lost in all those chain-rule paths, remember: the final step in computing any single derivative is a summation over all contributing chains. Don’t underestimate that final addition—it’s what actually gets us to our goal.
+
+More concretely, the partial derivative of the loss with respect to w[i][j] is the sum over all m, n, k of:
+(partial loss / partial x[m][n][k]) * (partial x[m][n][k] / partial w[i][j]).
+
+Now recall what we did in the forward pass: x[m][n][k] = w[idx[m][n]][k]. And since each element of w is independent—they just happen to live in the same tensor, but they don’t interact—the only terms that survive are those where idx[m][n] = i and k = j simultaneously. For those, the partial derivative of x with respect to w is 1; otherwise, it’s 0.
+
+That case analysis leads us straight to the final summation:
+The partial derivative of the loss with respect to w[i][j] is simply the sum of partial loss / partial x[m][n][k] over all m, n, k such that idx[m][n] = i and k = j.
+
+Let me say that in plain English:
+The gradient of the loss with respect to w[i][j] equals the sum of the gradients with respect to every x[m][n][k] where the corresponding index idx[m][n] equals i and the embedding dimension k equals j.
+
+I’m not going to bring up chunk-wise or row-wise analogies here—those just describe how you might batch the same operation across many independent inputs, which is more about implementation details than the core math. Not emphasizing that point right now.
+
+So, for this very first embedding function, just keep two things in mind:
+- Forward: x[m][n][k] = w[idx[m][n]][k]
+- Backward: grad_w[i][j] = sum of grad_x[m][n][k] for all (m, n, k) where idx[m][n] = i and k = j.
+
+
 # 2026-09-01 Update:
 Interesting thing happened. I remembered that loss.backward() updates—or rather, adds to—the grad attribute of any leaf parameter involved in the loss computation. But I always thought of the grad attribute as the gradient of the parameter with respect to some variables, and that its shape matches the parameter itself. So then what are those variables? And how is the gradient of the parameters even inferred?
 
