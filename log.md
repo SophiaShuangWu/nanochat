@@ -1,3 +1,8 @@
+# 2026-09-03 Update:
+I want to clarify something. As I mentioned yesterday, the chain rule is really about chaining and then summing at the end, so it's essential to identify all the chains involved. When I say "the partial derivative of the loss with respect to w[i][j]," what I actually mean is the portion of that partial derivative that flows through the intermediate variable x. I think I now understand why grad_fn.next_functions returns AccumulateGrad objects—it's because if there's another intermediate variable, say y, that also connects w to the loss, then we need to add that contribution to w.grad at position (i, j). So when I talk about the derivative of the loss with respect to x, I need to make sure that all paths from the loss back to x have been fully summed. I can't compute the partial derivative contribution with respect to w[i][j] before the full partial derivative with respect to x has been completed. This means the .grad attribute doesn't always hold the final partial derivative—it holds an accumulated sum at an intermediate stage. That said, by the end of the process, it will definitely contain the exact derivative value—no question about that.
+
+Even though the chain rule is easy to grasp conceptually, it's surprisingly tricky to implement, especially when there are many paths and many individual entries within a single tensor to keep track of.
+
 # 2026-09-02 Update:
 Today we're talking about the very first grad_fn: EmbeddingBackward0.
 The tensor wte.weight is a vocab_size x n_embd matrix—let's call it w. This is the tensor we need to accumulate partial derivative onto its .grad attribute.
