@@ -28,11 +28,31 @@ idx, idy, dataloader_state_dict = next(train_loader)
 
 # forward and backward
 x = model.transformer.wte(idx)
-print(x.grad_fn)
-print(x.grad_fn.next_functions)
+from nanochat.gpt import norm
+x = norm(x)
+gate = model.smear_lambda.to(x.dtype) * torch.sigmoid(model.smear_gate(x[:, 1:, :24]))
+x = torch.cat([x[:, :1], x[:, 1:] + gate * x[:, :-1]], dim=1)
+x0 = x
+print(x.sum())
+x = model.resid_lambdas[0] * x + model.x0_lambdas[0] * x0
+loss = x.sum()
+loss.backward()
+print(model.resid_lambdas.grad, model.x0_lambdas.grad, sep='\n')
 
-# x = x.sum()
-# x.backward()
+# # print(model.smear_gate.weight.shape)
+# print(y.grad_fn)
+# print(y.grad_fn.next_functions)
+# print(x.requires_grad)
+
+
+
+
+
+
+
+
+
+
 # print(model.transformer.wte.weight.grad[32,:])
 # print((model.transformer.wte.weight.grad>0).any())
 

@@ -14,6 +14,104 @@ When I refer to the shape of x as (device_batch_size, max_seq_len, n_embd), I re
 
 So far, here's a summary of what we've done to x. First, we embedded the input—each token ID in every sequence gets mapped to an n_embd-dimensional vector. Next, we applied a RootMeanSquare normalization operation so that each vector has unit norm. Then, for every sequence, we set aside the first token embedding vector. For each of the remaining token vectors, we took the first 24 elements as a slice, computed its dot product with smear_gate, and then multiplied that result by smear_lambda. The resulting scalar was then multiplied by the normalized embedding vector of the previous token, and finally added back to the current token's embedding vector. This applies to every token position except the first one in each sequence. Essentially, it first determines how much each non‑first token should "absorb" from its previous token's embedding, then simply adds that contribution to its own embedding to update itself.
 
+If we take a closer look at this line, 
+```python
+x = self.resid_lambdas[i] * x + self.x0_lambdas[i] * x0
+```
+it's actually pretty interesting. Let's interpret it in a Pythonic way, but walk through the forward and backward passes mathematically by strictly applying the chain rule.
+
+The outer operation is simply x = a + b, where x, a, and b all have the same shape: (batch_size, seq_len, n_embd). To be concrete, for any valid indices m, n, and k, we have:
+```text
+x[m][n][k] = a[m][n][k] + b[m][n][k]
+```
+Each element in a and b is independent — they're just separate variables living in the same tensor. So a[m][n][k] only affects the loss through x[m][n][k], and since:
+```text
+∂x[m][n][k] / ∂a[m][n][k] = 1
+```
+it follows that:
+```text
+∂L / ∂a[m][n][k] = ∂L / ∂x[m][n][k]
+```
+And the exact same holds for b:
+```text
+∂L / ∂b[m][n][k] = ∂L / ∂x[m][n][k]
+```
+Now let's look at the next operation in the backward pass: a = λ * input, where λ is a scalar (though in practice it's one element of a vector), while a and input keep the same tensor shape as before.
+
+The forward pass is dead simple — just multiply every element of input by λ. The backward pass, however, is a bit more nuanced. Suppose we already have the gradient of the loss with respect to a — meaning the loss is a function of all elements of a as intermediate variables, and other variables off this path don't matter. Now we want the gradient of the loss with respect to λ.
+
+Since λ contributes to every element of a, we need to sum over all (m, n, k) the product of:
+```text
+∂L / ∂a[m][n][k] * ∂a[m][n][k] / ∂λ
+```
+And since:
+```text
+∂a[m][n][k] / ∂λ = input[m][n][k]
+```
+we get:
+```text
+∂L / ∂λ = Σ_{m,n,k} (∂L / ∂a[m][n][k]) * input[m][n][k]
+```
+To test this, let's set L = x.sum(). Then the initial gradient tensor — ∂L/∂x — is all ones. From the earlier result, ∂L/∂a is the same as ∂L/∂x, so it's also all ones. Therefore:
+```text
+∂L / ∂λ = Σ_{m,n,k} 1 * input[m][n][k] = input.sum()
+```
+I verified this with the following code:
+```python
+# initiate the model
+from nanochat.gpt import GPTConfig, GPT, norm
+import torch
+def build_model_meta(depth):
+    base_dim = depth * 64
+    model_dim = ((base_dim + 128 - 1) // 128) * 128
+    num_heads = model_dim // 128
+    config = GPTConfig(
+        sequence_len=512, vocab_size=32768,
+        n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
+        window_pattern="L",
+    )
+    with torch.device("meta"):
+        model_meta = GPT(config)
+    return model_meta
+model = build_model_meta(4)
+model.to_empty(device=torch.device("cuda")) 
+model.init_weights()
+
+# load tokenizer
+from nanochat.tokenizer import get_tokenizer
+tokenizer = get_tokenizer()
+
+# generate input and target
+from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bos_bestfit
+train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
+idx, idy, dataloader_state_dict = next(train_loader) 
+
+# forward and backward
+x = model.transformer.wte(idx)
+from nanochat.gpt import norm
+x = norm(x)
+gate = model.smear_lambda.to(x.dtype) * torch.sigmoid(model.smear_gate(x[:, 1:, :24]))
+x = torch.cat([x[:, :1], x[:, 1:] + gate * x[:, :-1]], dim=1)
+x0 = x
+print(x.sum())
+x = model.resid_lambdas[0] * x + model.x0_lambdas[0] * x0
+loss = x.sum()
+loss.backward()
+print(model.resid_lambdas.grad, model.x0_lambdas.grad, sep='\n')
+```
+Output:
+```text
+tensor(-535.4370, device='cuda:0', grad_fn=<SumBackward0>)
+tensor([-535.4370,    0.0000,    0.0000,    0.0000], device='cuda:0')
+tensor([-535.4370,    0.0000,    0.0000,    0.0000], device='cuda:0')
+```
+This confirms that the .grad attribute of a tensor stores the accumulated gradient before the final step. Here, only λ[0] is actually used in the loss computation, so the gradient vector keeps zeros for the other entries while preserving the shape.
+
+Going through the forward and backward passes line by line is pretty fun — and it feels quite different from just running the full forward pass of the model. This whole exercise actually takes me back to my master's project about 9 years ago, where I worked on something called FTCB and computed first-order coefficients using Fortran with Intel compilers on Ubuntu. So computing partial derivatives at a local point isn't new to me — I did that kind of work when formulating molecular dynamics models.
+
+Back then, we used Fortran to run MD simulations and compute coefficients, then used the MD output to fit the data and compare against the coefficients we got from the code. I got stuck on the second-order coefficient comparison — the numbers just didn't match. That project was the first — and honestly the last — independent research project I took on. My advisor didn't really see how much I wanted to finish it. I just wanted to keep making progress, assuming things would work out. What's wrong with that?
+
+But this time? This time I'm working on nanochat, and I'm doing it for myself. No one telling me what to do or how to plan it. Just me, the code, and the math I actually enjoy. Nine years later, I'm finally back to doing research the way I always liked — on my own terms.
 
 # 2026-09-02 Update:
 Today we're talking about the very first grad_fn: EmbeddingBackward0.
