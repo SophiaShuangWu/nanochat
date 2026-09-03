@@ -3,6 +3,12 @@ I want to clarify something. As I mentioned yesterday, the chain rule is really 
 
 Even though the chain rule is easy to grasp conceptually, it's surprisingly tricky to implement, especially when there are many paths and many individual entries within a single tensor to keep track of.
 
+I hand-wrote the backward pass for the following operations:
+- x = norm(x) 
+- self.smear_gate(x[:, 1:, :24])
+- torch.sigmoid(self.smear_gate(x[:, 1:, :24]))
+- While working on gate = self.smear_lambda.to(x.dtype) * torch.sigmoid(self.smear_gate(x[:, 1:, :24])), I ran into a question. The output on the right is a tensor of shape device_batch_size x max_seq_len-1 x 1, so basically I'm multiplying smear_lambda elementwise across that entire right-hand tensor, producing gate with the same shape. Now I'm wondering: if I want the derivative of the loss with respect to smear_gate through gate, how do I get it? Can I just pick any one concrete entry, say gate[m][n][0] = smear_gate * x[m][n][0], where x here means torch.sigmoid(self.smear_gate(x[:, 1:, :24])), and then assume that the partial derivative of the loss w.r.t. gate[m][n][0] multiplied by x[m][n][0] is the answer? I almost convinced myself that's correct, but then I discussed it with DeepSeek, who reminded me about the final summation operation. Okay, y is a tensor, but that's not the main point—what matters are the independent variables living inside y. The loss is a function of all those entries: loss = function(y[0][0][0], ..., y[m][n][0], ..., y[device_batch_size-1][max_seq_len-2][0]), and each y[m][n][0] is independent of the others. So how should I actually compute what I need? Chain rule, right? Not just picking one chain, but going through every chain and summing them all together. I could simply write loss = function(Y), but that glosses over the crucial detail that all the y[m][n][0] entries are intermediate variables, and they are independent of each other.
+
 # 2026-09-02 Update:
 Today we're talking about the very first grad_fn: EmbeddingBackward0.
 The tensor wte.weight is a vocab_size x n_embd matrix—let's call it w. This is the tensor we need to accumulate partial derivative onto its .grad attribute.
