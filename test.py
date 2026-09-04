@@ -1,43 +1,76 @@
-# initiate the model
-from nanochat.gpt import GPTConfig, GPT, norm
+# # initiate the model
+# from nanochat.gpt import GPTConfig, GPT, norm
+# import torch
+# def build_model_meta(depth):
+#     base_dim = depth * 64
+#     model_dim = ((base_dim + 128 - 1) // 128) * 128
+#     num_heads = model_dim // 128
+#     config = GPTConfig(
+#         sequence_len=512, vocab_size=32768,
+#         n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
+#         window_pattern="L",
+#     )
+#     with torch.device("meta"):
+#         model_meta = GPT(config)
+#     return model_meta
+# model = build_model_meta(4)
+# model.to_empty(device=torch.device("cuda")) 
+# model.init_weights()
+
+# # load tokenizer
+# from nanochat.tokenizer import get_tokenizer
+# tokenizer = get_tokenizer()
+
+# # generate input and target
+# from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bos_bestfit
+# train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
+# idx, idy, dataloader_state_dict = next(train_loader) 
+
+#
+
+
 import torch
-def build_model_meta(depth):
-    base_dim = depth * 64
-    model_dim = ((base_dim + 128 - 1) // 128) * 128
-    num_heads = model_dim // 128
-    config = GPTConfig(
-        sequence_len=512, vocab_size=32768,
-        n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
-        window_pattern="L",
-    )
-    with torch.device("meta"):
-        model_meta = GPT(config)
-    return model_meta
-model = build_model_meta(4)
-model.to_empty(device=torch.device("cuda")) 
-model.init_weights()
+w = torch.tensor([1.0], requires_grad=True)
+loss = (w ** 2) / 2  
+(loss / 4).backward()  
+print(w.grad) 
 
-# load tokenizer
-from nanochat.tokenizer import get_tokenizer
-tokenizer = get_tokenizer()
 
-# generate input and target
-from nanochat.dataloader import tokenizing_distributed_data_loader_with_state_bos_bestfit
-train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, 1, 512, split="train", device=torch.device("cuda"), resume_state_dict=None)
-idx, idy, dataloader_state_dict = next(train_loader) 
+
+
+
+
+
+
+
 
 # forward and backward
-x = model.transformer.wte(idx)
-from nanochat.gpt import norm
-x = norm(x)
-gate = model.smear_lambda.to(x.dtype) * torch.sigmoid(model.smear_gate(x[:, 1:, :24]))
-x = torch.cat([x[:, :1], x[:, 1:] + gate * x[:, :-1]], dim=1)
-x0 = x
-print(x.sum())
-x = model.resid_lambdas[0] * x + model.x0_lambdas[0] * x0
-loss = x.sum()
-loss.backward()
-print(model.resid_lambdas.grad, model.x0_lambdas.grad, sep='\n')
+# x = model.transformer.wte(idx)
+# from nanochat.gpt import norm
+# x = norm(x)
+# gate = model.smear_lambda.to(x.dtype) * torch.sigmoid(model.smear_gate(x[:, 1:, :24]))
+# x = torch.cat([x[:, :1], x[:, 1:] + gate * x[:, :-1]], dim=1)
+# x0 = x
+# x = model.resid_lambdas[0] * x + model.x0_lambdas[0] * x0
+# ve = model.value_embeds[str(0)](idx).to(x.dtype) if str(0) in model.value_embeds else None
+# cos_sin = model.cos[:, :512], model.sin[:, :512]
+# # x = model.transformer.h[0](x, ve, cos_sin, (512, 0), None)
+# # x = x + model.transformer.h[0].mlp(norm(x))
+# x = model.transformer.h[0].mlp.c_fc(x)
+# # x = model.transformer.h[0].mlp.c_proj(x)
+# print(x.grad_fn)
+# print(x.grad_fn.next_functions)
+
+# import torch
+# a = torch.arange(-1,3)
+# print(a.unsqueeze(-1))
+# # b = a.square()
+# # print(b)
+# b = torch.arange(4)
+# c = torch.outer(a, b)
+# print(c.shape)
+
+
 
 # # print(model.smear_gate.weight.shape)
 # print(y.grad_fn)
@@ -47,18 +80,8 @@ print(model.resid_lambdas.grad, model.x0_lambdas.grad, sep='\n')
 
 
 
-
-
-
-
-
-
 # print(model.transformer.wte.weight.grad[32,:])
 # print((model.transformer.wte.weight.grad>0).any())
-
-
-
-
 
 
 
