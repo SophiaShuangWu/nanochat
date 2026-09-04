@@ -1,3 +1,19 @@
+# 2026-09-04 Update:
+There's one thing I want to bring up. I think the reason I keep missing chain terms and the final summation when applying the chain rule is that I tend to treat backpropagation as if it's just the straightforward inverse of the forward pass. In the forward pass, we map inputs to a single definite output, so intuitively, when I see the derivative of the loss with respect to the output, my brain wants to work backward to find the "corresponding" input. And once I find one, I catch myself thinking, "Done!" — but that's not how it works.
+
+Backpropagation isn't a one-to-one inverse mapping. It's about finding all the paths, going through the chain node by node, and accumulating the contributions to the derivative of the loss with respect to every intermediate variable and leaf parameter, storing them in the .grad attribute. It's not a function mapping.
+
+Take this example:
+```python
+x = x + model.transformer.h[0].mlp[x]
+```
+Starting from the final output, we know output_x.grad, and we can accumulate the contribution to the first part (the direct input_x term). But that same input_x also appears inside the second part, and we can't fully compute its contribution at this node alone. So at this point, the input_x.grad we have is not the final gradient yet.
+
+Also, another thing: when I just say "grad," it's easy to confuse it with the full gradient vector, and it doesn't explicitly reference the loss, so it might be mistaken for the gradient of the variable with respect to some other variables—which isn't correct. So for now, I'm going to keep calling it the "contribution to the derivative of the loss with respect to that specific variable," just to keep things clear in my head.
+
+Back to nanochat/base_train.py, line 517 has been checked.
+
+
 # 2026-09-03 Update:
 I want to clarify something. As I mentioned yesterday, the chain rule is really about chaining and then summing at the end, so it's essential to identify all the chains involved. When I say "the partial derivative of the loss with respect to w[i][j]," what I actually mean is the portion of that partial derivative that flows through the intermediate variable x. I think I now understand why grad_fn.next_functions returns AccumulateGrad objects—it's because if there's another intermediate variable, say y, that also connects w to the loss, then we need to add that contribution to w.grad at position (i, j). So when I talk about the derivative of the loss with respect to x, I need to make sure that all paths from the loss back to x have been fully summed. I can't compute the partial derivative contribution with respect to w[i][j] before the full partial derivative with respect to x has been completed. This means the .grad attribute doesn't always hold the final partial derivative—it holds an accumulated sum at an intermediate stage. That said, by the end of the process, it will definitely contain the exact derivative value—no question about that.
 
