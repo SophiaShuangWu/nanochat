@@ -27,20 +27,17 @@
 # idx, idy, dataloader_state_dict = next(train_loader) 
 
 #
+import numpy as np
+from scipy.special import softmax
+x = np.array([1.0, 2.0, 3.0])
+y = softmax(x)
+print(y, y.sum(), sep='\n') 
 
-
-import torch
-w = torch.tensor([1.0], requires_grad=True)
-loss = (w ** 2) / 2  
-(loss / 4).backward()  
-print(w.grad) 
-
-
-
-
-
-
-
+# import torch
+# w = torch.tensor([1.0], requires_grad=True)
+# loss = (w ** 2) / 2  
+# (loss / 4).backward()  
+# print(w.grad) 
 
 
 
