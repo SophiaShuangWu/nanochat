@@ -1,3 +1,14 @@
+# 2026-09-06 Update:
+To update yesterday's staged summary: loss is now treated as a function of all independent variables in idx, all model parameters, and targets—the last of which I missed yesterday.
+
+The forward pass is a sequence of functions, where every function except the loss must have its output used as input to at least one other function. The sequence respects a temporal ordering: any function whose output feeds into another must come before that function in the sequence. Each independent variable in idx, model parameters, and targets serves as input to some functions in this sequence.
+
+To compute gradient components of loss, we reverse the forward sequence. We set the derivative of the loss with respect to itself to 1, then start with the last function in the forward sequence—the one that produces the loss. For that function, we compute the derivative of its output with respect to each of its inputs, multiply by 1, and accumulate the result into the .grad attribute of each corresponding input. We then repeat this process for the preceding function. At each step, we can assume the derivative of the loss with respect to the current function's output has already been fully accumulated. If not, then there must be later functions that take this output as input—but when we reverse the order, that would imply a violation of the forward sequence ordering, which would be paradoxical. We continue this backward pass until the derivatives of the loss with respect to all model parameters are fully accumulated.
+
+So, in the end, while DeepSeek keeps referring to—or the code suggests—a computational graph, I don't think the static graph structure is what really matters. What actually matters is the forward function sequence and its reverse, the backward derivative accumulation sequence.
+
+
+
 # 2026-09-05 Update:
 I'm gonna give a staged summary of what I learned from walking through the forward() and backward() methods of GPT class in nanochat.gpt.py before I move on to the next thing.
 
