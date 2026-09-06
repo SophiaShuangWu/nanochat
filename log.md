@@ -11,6 +11,8 @@ The derivative of the loss with respect to an independent variable in the model 
 
 So, in the end, while DeepSeek keeps referring to—or the code suggests—a computational graph, I don't think the static graph structure is what really matters. What actually matters is the forward function sequence and its reverse, the backward derivative accumulation sequence.
 
+As I get ready to go back to nanochat.base_train.py and move on, I just want to leave a few thoughts here. The forward pass is more important than the backward pass, because it defines the overall skeleton of the workflow. The essence of the forward pass is a sequence of functions that follow three core principles. For the backward pass, just hold on to the definition of the derivative with respect to the independent variable, expressed through intermediate variables—and keep in mind the claim I proved by induction, which supports the correctness of the concrete backward workflow.
+
 # 2026-09-05 Update:
 I'm gonna give a staged summary of what I learned from walking through the forward() and backward() methods of GPT class in nanochat.gpt.py before I move on to the next thing.
 
