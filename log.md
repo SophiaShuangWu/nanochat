@@ -1,3 +1,10 @@
+# 2026-09-07 Update:
+This project is starting to feel tedious to me now. Optimizers? I have no clue about them. I mean, I know I could just read the code Pythonically and figure out which knobs to turn—but even with a limited set of hyperparameters, it still feels like a lot. And sure, the loss converges, but why does it converge? How do you even guarantee convergence? That kind of stuff—I just don't know. I never took it seriously in college, and I've been cutting myself too much slack, so I've ended up taking zero ownership, making zero real contribution, and building nothing that actually matters. Honestly, it's pathetic. It's embarrassing. Okay, reflection time's over — it's fine. I've just never been this into a project before.
+
+So here's the thing: I have no idea about optimizers or what comes next in this nanochat project. I guess I'll just have to figure it out as I go. Job? I wish I had one right now, but I'm scared I'll end up in another irrelevant role or on a team that's a bad fit. All I can do is keep sharpening my meta-skills in computing and logic, and get back in touch with my mathematical intuition—both from a CS angle and from a more analytical one. This is the one thing that, if I don't follow through, I'll never forgive myself ten years from now. I've already wasted fourteen years. Jesus Christ. This time, I'm actually taking responsibility for real.
+
+I need to sit with those nagging thoughts until they settle, until I can approach the optimizer with a clear head and no expectations. And I do mean that meta-mindset stuff—genuinely.
+
 # 2026-09-06 Update:
 To update yesterday's staged summary: loss is now treated as a function of all independent variables in idx, all model parameters, and targets—the last of which I missed yesterday.
 

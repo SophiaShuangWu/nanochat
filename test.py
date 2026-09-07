@@ -27,11 +27,13 @@
 # idx, idy, dataloader_state_dict = next(train_loader) 
 
 #
-import numpy as np
-from scipy.special import softmax
-x = np.array([1.0, 2.0, 3.0])
-y = softmax(x)
-print(y, y.sum(), sep='\n') 
+# print(round(-3.5))
+print(1/40)
+# import numpy as np
+# from scipy.special import softmax
+# x = np.array([1.0, 2.0, 3.0])
+# y = softmax(x)
+# print(y, y.sum(), sep='\n') 
 
 # import torch
 # w = torch.tensor([1.0], requires_grad=True)
