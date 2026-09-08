@@ -1,3 +1,6 @@
+# 2026-09-08 Update:
+Nanochat.base_train.py lines 523-527 have been checked. Those five lines made it clear that the learning rate needs to be updated as steps increase, and for parameters from transformer.h, the momentum and weight_decay also need adjustments over time. 
+
 # 2026-09-07 Update:
 This project is starting to feel tedious to me now. Optimizers? I have no clue about them. I mean, I know I could just read the code Pythonically and figure out which knobs to turn—but even with a limited set of hyperparameters, it still feels like a lot. And sure, the loss converges, but why does it converge? How do you even guarantee convergence? That kind of stuff—I just don't know. I never took it seriously in college, and I've been cutting myself too much slack, so I've ended up taking zero ownership, making zero real contribution, and building nothing that actually matters. Honestly, it's pathetic. It's embarrassing. Okay, reflection time's over — it's fine. I've just never been this into a project before.
 
