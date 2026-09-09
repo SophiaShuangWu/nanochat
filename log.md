@@ -1,9 +1,5 @@
 # 2026-09-09 Update:
-I’ve reviewed line 539 in nanochat/base_train.py, which handles the parameter update. Line 540 ensures gradients are zeroed out before each iteration, the number of iterations is already set, and lines 502–503 handle exiting the training loop. 
-
-The optimizer is worth discussing in depth—not just translating code into formulas, but actually talking through it. I know this codebase is full of concrete, practical examples, but this isn’t the right time for me to dive deep into it. I need to get through the broader LLM training pipeline first.
-
-So with that, I’ll call nanochat/base_train.py done for now.
+Scalar is None, so lines 529-537 get skipped, which leaves optimizer.step() doing the actual parameter updates. Now I'm torn — do I really need to dive into the optimizer guts? The math is heavy, and honestly, part of me wants to pivot and start focusing on job apps. But nah. I want to keep nanochat clean and respect it like I did on day one. So I'm going to take the optimizer seriously and work through it.
 
 # 2026-09-08 Update:
 Nanochat.base_train.py lines 523-527 have been checked. Those five lines made it clear that the learning rate needs to be updated as steps increase, and for parameters from transformer.h, the momentum and weight_decay also need adjustments over time. 
