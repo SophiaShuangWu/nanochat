@@ -27,8 +27,13 @@
 # idx, idy, dataloader_state_dict = next(train_loader) 
 
 #
+
+from collections import defaultdict
+state = defaultdict(dict)
+print(state[1])
+
 # print(round(-3.5))
-print(1/40)
+# print(1/40)
 # import numpy as np
 # from scipy.special import softmax
 # x = np.array([1.0, 2.0, 3.0])
