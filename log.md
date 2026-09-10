@@ -1,3 +1,6 @@
+# 2026-09-10 Update:
+scripts/base_train.py line 539 -> nanochat/optim.py line 431.
+
 # 2026-09-09 Update:
 Scalar is None, so lines 529-537 get skipped, which leaves optimizer.step() doing the actual parameter updates. Now I'm torn — do I really need to dive into the optimizer guts? The math is heavy, and honestly, part of me wants to pivot and start focusing on job apps. But nah. I want to keep nanochat clean and respect it like I did on day one. So I'm going to take the optimizer seriously and work through it.
 
@@ -24,7 +27,7 @@ The derivative of the loss with respect to an independent variable in the model 
 
 So, in the end, while DeepSeek keeps referring to—or the code suggests—a computational graph, I don't think the static graph structure is what really matters. What actually matters is the forward function sequence and its reverse, the backward derivative accumulation sequence.
 
-As I get ready to go back to nanochat.base_train.py and move on, I just want to leave a few thoughts here. The forward pass is more important than the backward pass, because it defines the overall skeleton of the workflow. The essence of the forward pass is a sequence of functions that follow three core principles. For the backward pass, just hold on to the definition of the derivative with respect to the independent variable, expressed through intermediate variables—and keep in mind the claim I proved by induction, which supports the correctness of the concrete backward workflow.
+As I get ready to go back to scripts/base_train.py and move on, I just want to leave a few thoughts here. The forward pass is more important than the backward pass, because it defines the overall skeleton of the workflow. The essence of the forward pass is a sequence of functions that follow three core principles. For the backward pass, just hold on to the definition of the derivative with respect to the independent variable, expressed through intermediate variables—and keep in mind the claim I proved by induction, which supports the correctness of the concrete backward workflow.
 
 # 2026-09-05 Update:
 I'm gonna give a staged summary of what I learned from walking through the forward() and backward() methods of GPT class in nanochat.gpt.py before I move on to the next thing.
@@ -51,7 +54,7 @@ Starting from the final output, we know output_x.grad, and we can accumulate the
 
 Also, another thing: when I just say "grad," it's easy to confuse it with the full gradient vector, and it doesn't explicitly reference the loss, so it might be mistaken for the gradient of the variable with respect to some other variables—which isn't correct. So for now, I'm going to keep calling it the "contribution to the derivative of the loss with respect to that specific variable," just to keep things clear in my head.
 
-Back to nanochat/base_train.py, line 517 has been checked.
+Back to scripts/base_train.py, line 517 has been checked.
 
 Lines 510-518 have been checked. So far, things are becoming clearer and clearer to me—to the point where I'm trying to work through every doubt in my mind, which is pretty similar to how I approached things back in high school. But this isn't the right time to lean into that style, and I'm not inherently stubborn. The more I get done, the more I want to take charge or take control of everything, which is a dangerous tendency—and I don't want to pay that price again. Also, how am I supposed to keep up with the latest developments in LLMs? That question almost feels like asking whether I should just give up now. The mix of instability while progressing, combined with anxiety about jobs and the potential fallout with my parents, makes me want to shut down what I'm doing right here, right now. I don't know if this is a repeat of what happened to me nine years ago. People around me have disappeared, so maybe I'm using my parents to recreate that dynamic and feel the same feeling again? I'm not sure what I'm doing or why I'm even saying this here. I promise I'll keep moving forward, but I really needed to get these words out—even if they don't fully reflect what I mean. I just want to convince myself that I can speak them without dropping the project or quitting.
 
